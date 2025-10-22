@@ -1000,6 +1000,7 @@ note that exposed services are also added in the clinet accessible under the `se
 ```ts
 client.services.<service-name/>.method() // typesafe
 ```
+## Code invoker, you can start your app woth code invoker where it exposes a ui in which you can individually invoke a class method and see the res inside a ui. 
 
 ### Types
 
