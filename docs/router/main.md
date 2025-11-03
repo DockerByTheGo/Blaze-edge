@@ -3,6 +3,17 @@
 
 it supports all the options from the @core library and more
 
+## Concepts
+
+### The response object 
+
+### Supported responses
+
+#### Template
+
+you can return jsx directly 
+
+
 ## Caching 
 ### Basics
 #### Local and global
