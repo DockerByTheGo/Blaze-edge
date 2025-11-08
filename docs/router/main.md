@@ -1,7 +1,7 @@
 
 # Router
 
-it supports all the options from the @core library and more
+it supports all the options from the @core library and more so if you do not understand somwthing the chance is that its explained in blazy-minimal-lib
 
 ## Concepts
 
