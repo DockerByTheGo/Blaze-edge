@@ -13,7 +13,7 @@ type Subscribeable<T extends Record<string, (value: unknown) => any>> = {
 
 
 class Node {
-    constructor ( public name: string, public children: Record<string, Node>) {
+    constructor(public name: string, public children: Record<string, Node>) {
 
     }
 }
@@ -22,19 +22,19 @@ class Node {
 
 function tokenizeRouter(x: Record<string, unknown>, r: Record<string, Node> = {}): Record<string, Node> {
     objectEntries(x).forEach(([name, value]) => {
-        Try(r[name],{
+        Try(r[name], {
             ifNone: () => {
                 r[name] = new Node(name, {})
             },
             ifNotNone: v => {
             }
         })
-    })    
+    })
 }
 
 
 function checkEntry(x: string, existingRputes: Node) {
-    Try(existingRputes.children[x],{
+    Try(existingRputes.children[x], {
         ifNone: () => {
             existingRputes.children[x] = new Node(x, {})
         },
@@ -52,19 +52,19 @@ console.log(checkEntry("", new Node("", {})))
 let g = 0
 
 function tokenizeRoute(x: string, existingRputes: Node = new Node("", {})) {
-    if(x === "/" || x === ""){
-        return existingRputes 
+    if (x === "/" || x === "") {
+        return existingRputes
     }
     console.log("k", x)
-    map(x.slice(1,x.slice(1,x.length).indexOf("/") + 1), ((part) => {
-        Try(existingRputes.children[part],{
+    map(x.slice(1, x.slice(1, x.length).indexOf("/") + 1), ((part) => {
+        Try(existingRputes.children[part], {
             ifNone: () => {
                 existingRputes.children[part] = new Node(part, {})
-                tokenizeRoute(x.slice(x.slice(1,x.length).indexOf("/") + 1, x.length), existingRputes.children[part])
-                
+                tokenizeRoute(x.slice(x.slice(1, x.length).indexOf("/") + 1, x.length), existingRputes.children[part])
+
             },
             ifNotNone: v => {
-                tokenizeRoute(x.slice(x.slice(1,x.length).indexOf("/") + 1, x.length), existingRputes.children[part])
+                tokenizeRoute(x.slice(x.slice(1, x.length).indexOf("/") + 1, x.length), existingRputes.children[part])
             }
         })
     }))
@@ -91,57 +91,56 @@ function createSubscribeable<T extends Record<string, (value: any) => any>>(
         if (Object.prototype.hasOwnProperty.call(handlers, key)) {
             const capitalizedKey = key.charAt(0).toUpperCase() + key.slice(1);
             const eventKey = `on${capitalizedKey}` as const;
-            
+
             const fn = ((value?: any) => {
                 return handlers[key](value);
             }) as any;
-            
+
             fn[eventKey] = (value: any) => handlers[key](value);
-            
+
             result[key] = fn;
         }
     }
-    
+
     return result as Subscribeable<T>;
 }
 
 
 
 function runHookHandler(route: string, definedRoutes: Node): void {
-    
+
 
 }
 
 
-export class Blazy extends Extended<{},{}>{
+export class Blazy extends Extended<{}, {}> {
     constructor(
 
-    ){
+    ) {
         const cache = new Cache()
         super()
-        this.addService("name",cache)
+        this.addService("name", cache)
     }
 
-    addService(name: string,v: Record<string, (value: any) => any>) {
-       this.hook(v => {
-        return {
-            ...v,
-            [name]: createSubscribeable(v)
-        }
-       })
+    addService(name: string, v: Record<string, (value: any) => any>) {
+        this.hook(v => {
+            return {
+                ...v,
+                [name]: createSubscribeable(v)
+            }
+        })
     }
 
     routify<T extends Record<string, unknown>>(v: T) {
-        if(v["isCrudified"]){
+        if (v["isCrudified"]) {
             objectEntries(v).filter(([key, val]) => typeof val === "function").forEach(([key, value]) => {
                 this[key](key, value)
             })
-        }else {
+        } else {
             objectEntries(v).filter(([key, val]) => typeof val === "function").forEach(([key, value]) => {
                 this.post(key, value)
             })
         }
-
 
     }
 
