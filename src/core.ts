@@ -1,6 +1,7 @@
 import { Extended } from "../../lib/src/core/websocket/server/app/extended";
 import { Try, objectEntries, overload } from "@blazyts/better-standard-library";
 import { Cache } from "../services/builtins/cache";
+
 type Subscribeable<T extends Record<string, (value: unknown) => any>> = {
     [K in keyof T]: {
         invoke: (v: Parameters<T[K]>) => ReturnType<T[K]>;
