@@ -1,5 +1,5 @@
 import { Extended } from "../../lib/src/core/websocket/server/app/extended";
-import { Try, objectEntries, overload } from "@blazyts/better-standard-library";
+import { Function, Try, objectEntries, overload } from "@blazyts/better-standard-library";
 import { Cache } from "../services/builtins/cache";
 
 type Subscribeable<T extends Record<string, (value: unknown) => any>> = {
@@ -145,4 +145,27 @@ export class Blazy extends Extended<{}, {}> {
 
     }
 
+    simpleAddRoute<TFunc extends Function>(func: TFunc) {
+        return this.post("/rpc/" + func.name, (ctx) => {
+            validateSchema(ctx.body, func.schema, {
+                ifValid: v => new Response(JSON.stringify({result: func.execute(v)}), {
+                    status: 200,
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
+                }),
+                ifInvalid: err => new Response(JSON.stringify({error: "Invalid schema", details: err}), {
+                    status: 400,
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
+                })
+            })
+        })
+    }
 }
+
+// simple add Routee is if you are already using blazy Functopn functions in your poeect and just want to simply epose them into blazy ts routes
+new Blazy().simpleAddRoute(new Function("koko", {a: ""}, arg => {
+    return arg.a
+}))
