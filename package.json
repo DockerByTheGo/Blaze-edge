@@ -1,14 +1,14 @@
 {
   "name": "blazy-edge",
-  "module": "index.ts",
   "type": "module",
   "private": true,
-  "devDependencies": {
-    "@types/bun": "latest",
-    "@blazyts/better-standard-library": "workspace:*",
-    "@blazyts/backend-lib": "workspace:*"
-  },
+  "module": "index.ts",
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "devDependencies": {
+    "@blazyts/backend-lib": "workspace:*",
+    "@blazyts/better-standard-library": "workspace:*",
+    "@types/bun": "latest"
   }
 }

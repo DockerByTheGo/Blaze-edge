@@ -17,7 +17,7 @@ If you prefer a simpler function without computations:
 ```ts
 app.use(simpleTemplate(`
   <Layout>{body}</Layout>
-`))
+`));
 ```
 
 > **Note:** This might lead to XSS vulnerabilities if you don't sanitize your inputs.
@@ -39,7 +39,7 @@ app.use(template(ctx => {
 }))
 
 app.use(template(ctx => {
-  return <div>{ctx.body}</div>  
+  return <div>{ctx.body}</div>
 }))
 
 app.use(simpleTemplate(`

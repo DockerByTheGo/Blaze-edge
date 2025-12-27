@@ -1,9 +1,7 @@
-export class Cache<Entries extends Record<string, unknown>>{
-    
+export class Cache<Entries extends Record<string, unknown>> {
+  constructor() {}
 
-    constructor(){}
+  addEntry() {}
 
-    addEntry(){}
-
-    invalidate(){}
+  invalidate() {}
 }

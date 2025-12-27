@@ -5,10 +5,11 @@ A comprehensive interface for monitoring and managing your application.
 ## Features
 
 ### Inspect logs with filtering options
-You can inspect all the logs from the logger service inside a designated editor. You can filter by source (also you can export your session so that it persits restarts). Also you can query the logs with an sql like editor 
 
+You can inspect all the logs from the logger service inside a designated editor. You can filter by source (also you can export your session so that it persits restarts). Also you can query the logs with an sql like editor
 
 ### Endpoint Tester
+
 - Test both WebSocket and HTTP endpoints
 - View detailed request/response information
 - Logs tab showing all performed requests
@@ -16,9 +17,10 @@ You can inspect all the logs from the logger service inside a designated editor.
 - Service entity tracking for each request
 
 ### Backend Explorer
+
 #### Visualize code structure
 
-Describes the code in  graph like manner
+Describes the code in graph like manner
 
 It also grabs your jsdoc comments and displays them in the graph
 
@@ -26,9 +28,10 @@ It also grabs your jsdoc comments and displays them in the graph
 
 #### Directly invoke service methods from the GUI and see their responses
 
-
 #### Code Structure Visualization
+
 Example structure:
+
 ```
 /
 - users
@@ -42,6 +45,7 @@ Example structure:
 ```
 
 #### Filtering data
+
 Filter by controllers and services:
 
 ```typescript
@@ -56,29 +60,32 @@ const filter = {
 // Find routes using specific services
 const serviceFilter = {
   services: {
-    uses: ['userService', 'authService']
+    uses: ["userService", "authService"]
   }
 };
 ```
 
-
-
 ### Active Connections
+
 - Monitor all WebSocket connections
 - View connection details and metrics
 - Track message throughput
 
 ### History
+
 View and query request history with SQL-like syntax:
+
 ```sql
-WHERE REQ.IS_HTTP 
+WHERE REQ.IS_HTTP
 AND REQ.HEADERS.AUTHORIZATION_ATTEMPT > 10
 ```
 
-The logger also supports an sql like syntaxis for quering 
+The logger also supports an sql like syntaxis for quering
 
 ### Code Explorer
+
 Visualize relationships between components:
+
 ```
 ┌────────────────────┐
 │   BookController   │
@@ -101,13 +108,17 @@ Visualize relationships between components:
 ```
 
 ## Enabling Code Explorer
+
 Enable the code explorer in `middlewares/gui/main.ts`:
+
 ```typescript
-ManagementPanel(["code-explorer"]) // Enable code explorer
+ManagementPanel(["code-explorer"]); // Enable code explorer
 ```
 
 ## Extending the Panel
+
 Easily add custom routes using JSX:
+
 ```typescript
 app.extras.panel.addRoutes({
   route => <YourCustomComponent />

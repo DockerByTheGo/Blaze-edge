@@ -1,3 +1,3 @@
 export type WithDescription = {
-    description: string;
+  description: string;
 };

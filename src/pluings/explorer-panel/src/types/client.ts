@@ -5,21 +5,21 @@ import type { MyOpenApiDefinitions } from "./openapi/main.js";
 
 namespace Client {
 
-    export type Metadata = {
-        url: Url;
-    };
+  export type Metadata = {
+    url: Url;
+  };
 
-    const endpointObject = z.object();
+  const endpointObject = z.object();
 
-    type Endpoints<T extends string, Y> = Record<T, Y>;
+  type Endpoints<T extends string, Y> = Record<T, Y>;
 
 }
 
 class Client<T extends string> {
-    private metadata: Client.Metadata;
+  private metadata: Client.Metadata;
 
-    readonly routes;
-    constructor(metadata: Client.Metadata, endpoints: (MyOpenApiDefinitions.EndpointMetadata)[]) {
+  readonly routes;
+  constructor(metadata: Client.Metadata, endpoints: (MyOpenApiDefinitions.EndpointMetadata)[]) {
 
-    }
+  }
 }
