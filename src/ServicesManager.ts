@@ -4,6 +4,9 @@ export class Hooks {
   public readonly onAddedService: Piper;
 }
 
+
+
+
 export class ServiceManager<Services extends Record<string, Service> & { cache: Service; managerPanel: Service }> {
   public services: Services;
 
@@ -20,3 +23,7 @@ export class ServiceManager<Services extends Record<string, Service> & { cache: 
     return this as unknown as ServiceManager<Services & Record<string, T>>;
   }
 }
+
+
+
+
