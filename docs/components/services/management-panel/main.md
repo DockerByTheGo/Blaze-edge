@@ -2,6 +2,8 @@
 
 A comprehensive interface for monitoring and managing your application.
 
+Inspired from encore js 
+
 ## Features
 
 ### Inspect logs with filtering options
@@ -124,3 +126,21 @@ app.extras.panel.addRoutes({
   route => <YourCustomComponent />
 })
 ```
+
+
+
+
+
+## Code invoker, you can start your app woth code invoker where it exposes a ui in which you can individually invoke a class method and see the res inside a ui.
+
+### Types
+
+#### More specific hooks
+
+##### Macros
+
+##### Blocks
+
+### App level hooks
+
+### Handler level hooks

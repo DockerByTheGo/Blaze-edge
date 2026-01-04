@@ -1,12 +1,10 @@
-# Router
+!Note 
 
-it supports all the options from the @core library and more
+some features of this service is convered in the docs for the router since they are made to be tightly linked for better developer experience in terms of writing code 
 
-## Caching
+# Basics
 
-### Basics
-
-#### Local and global
+## Local and global
 
 Most options support both options and if a local and global is defined the local will override the global
 
@@ -27,7 +25,7 @@ app.delete("/", ctx => {
 })
 ```
 
-### Hooks
+## Hooks
 
 the cache service supports the following hooks
 `onRegistered(ctx => void)` runs whenever the {cache: ...} is added to a route handler, the ctx is the `Handler object`
@@ -35,7 +33,10 @@ the cache service supports the following hooks
 `onChanged(ctx => void)` runs whenever the an entry has been changed, ctx is the same as onFirstEntry, if users says it is needed in the future it will provide also which in order change is it, e,g, first chnage, second change and so on, iit is hookd directly to the set method so it unrs whenever set is called no matter where
 `onInvalidated(ctx => void) ` runs whenver a cache is invalidated and the ctx is the entry which was invalidated and the `Handler Object`
 
-### Service level caching
+
+
+
+## Service level caching
 
 Since we are a `multi-protocol-framework` and sometimes you want to expose the same service from mutliple protocols you might want to cache services too. You can do this by using the `cachify` utility on an existing or already added service. It supports all the options as the route cacher
 
@@ -51,11 +52,8 @@ app.services.add(Cachify(your-service))
 
 app.services.<your-service/>.transform(v => Cachify(v))
 
-### How it works
 
-when you add the `{cache:{ }}` internally the app starts keeping track of its responses. When a request for a route which has this enabled the app checks if the entry is null if it is it runs the handler and calls cache.<route-id/>.set(<result-of-the-handler/>) and if it is not it retuns the stored cache entry. when you call cache.<route-id/>.invalidate behind the scenes it runs cache.<route-id/>.set(null).
-
-### cache service object
+## cache service object
 
 #### root methods
 
@@ -419,3 +417,7 @@ execpt the data the set method also allows to add additional data which can be u
 the cache is flexible you can do a lot of things with it
 
 for example you can expose an endpoint so that users can manage a cache
+
+# How it works
+
+when you add the `{cache:{ }}` internally the app starts keeping track of its responses. When a request for a route which has this enabled the app checks if the entry is null if it is it runs the handler and calls cache.<route-id/>.set(<result-of-the-handler/>) and if it is not it retuns the stored cache entry. when you call cache.<route-id/>.invalidate behind the scenes it runs cache.<route-id/>.set(null).
