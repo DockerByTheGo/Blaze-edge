@@ -66,21 +66,7 @@ hitting / will return
   </div>
 </div>
 ```
-# management panel
-
-
----
-
-# Types
-
-###
-
-Steal things from encore cloud
-
-# Built in services
-
-
-
+#
 # Built in support for jsx in routes
 
 Look at pino js for how to build a good logger and encore one too
