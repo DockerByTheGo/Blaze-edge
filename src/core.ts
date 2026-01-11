@@ -47,13 +47,26 @@ export class Blazy extends RouterObject<{
    * Sets up authentication for the application.
    * This method configures hooks for authentication.
    */
-  auth() {
+  auth() { // this is a middleware which runs right after the last before auth hook 
 
   } // sets a hook for authentication 
+
+  /*
+  
+  the first hook which is being ran when a new req is recieved
+
+  there are three types of hooks which are of type onRequest by default, they are called parse -> transforms json string into js object. Before transform 
+  which takes the js object and transforms it into the RequestHelper object 
+  
+  */
+  onRequestHook(){
+
+  }
 
   /**
    * Sets up pre-authentication logic.
    * This method configures hooks that run before authentication.
+   * it runs right after the last onRequest hook 
    */
   beforeAuth() {
 
