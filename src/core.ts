@@ -1,18 +1,24 @@
-import {  RouterObject } from "@blazyts/backend-lib";
+import { RouterObject } from "@blazyts/backend-lib";
 import type { RouterHooks, RouteTree } from "@blazyts/backend-lib/src/core/server/router/types";
-import type { IFunc, URecord } from "@blazyts/better-standard-library";
+import type { IFunc, Last, URecord } from "@blazyts/better-standard-library";
 import { BasicValidator, map, NormalFunc, objectEntries, Try } from "@blazyts/better-standard-library";
-import { FunctionRouteHandler } from "./route-handlers/function/FunctionRouteHandler";
+import { FunctionRouteHandler } from "./route-handlers/variations/function/FunctionRouteHandler";
 import type { Schema } from "@blazyts/better-standard-library/src/others/validator/schema";
 import { Path } from "@blazyts/backend-lib/src/core/server/router/utils/path/Path";
 import { FileRouteHandler } from "./route-handlers/variations";
 import { DSLRouting } from "./route-matchers/dsl/main";
+import { NormalRouting } from "./route-matchers/normal";
+import type { Hook, Hooks } from "@blazyts/backend-lib/src/core/types/Hooks/Hooks";
 
 /**
  * Main Blazy framework class that extends RouterObject for building backend applications.
  * Provides methods for adding services, authentication, routing, and request handling.
  */
-export class Blazy extends RouterObject<{}, {}> {
+export class Blazy extends RouterObject<{
+  beforeRequest: Hooks<[]>,
+  afterRequest: Hooks<[]>,
+
+}, {}> {
   /**
    * Creates a new instance of Blazy.
    * Initializes with a cache service.
@@ -91,6 +97,21 @@ export class Blazy extends RouterObject<{}, {}> {
     }
   }
 
+  routifyRpc() { }
+
+  // allows you to call multiple methods on the app while using the app object, this allosws for use cases where you may need to access the app object but do not wanna breake method chaining for example 
+  /*
+  
+    const app = new Blazy().addRoute().addRoute().block(console.log)
+  
+    // without it you will have to break the method chaining to console log at this current point since yeah you could at thend but then it will also have applied methods which you do not wanna observer 
+  */
+
+
+
+
+  block<TReturn extends Blazy>(func: (app: this) => TReturn): TReturn { }
+
   /**
    * Adds a simple route for a function with schema validation.
    * Creates an RPC-style route at `/rpc/{functionName}` that validates the request body
@@ -126,25 +147,44 @@ export class Blazy extends RouterObject<{}, {}> {
 
 
   }
+  // by defaulkt it adds the name of the file as the path for example File("/hi.txt") -> /hi.txt
+  file<TPath extends string>(path: TPath, route?: string): this {// maybe use the builtin path strucutre
+    return this.addRoute({
+      routeMatcher: new NormalRouting(`/static/${route ? route : path}}`),
+      handler: new FileRouteHandler(path),
+    })
+  }
 
-    // by defaulkt it adds the name of the file as the path for example File("/hi.txt") -> /hi.txt
-    file<TPath extends string>(path: TPath){
-      return this.addRoute({
-        routeMatcher: new NormalRouting(`/static/${path}`),
-        handler: new FileRouteHandler(path),
-      })
-    }
+  http<TPath extends string, Thandler extends (arg: Args extends null ? URecord : Args) => unknown, Args extends URecord | null = null>(v: {
+    path: TPath,
+    handler: Thandler,
+    schema?: Args
+  }) {
+    return this.addRoute({
+      routeMatcher: new DSLRouting(v.path),
+      handler: new NormalRouteHandler()
+    })
+  }
 
-    http<TPath extends string, Thandler extends (arg: Args extends null ? URecord : Args) => unknown, Args extends URecord | null = null>(v: {
-      path: TPath,
-      handler: Thandler,
-      schema?: Args
-    }){
-      return this.addRoute({
-        routeMatcher: new DSLRouting(v.path),
-        handler: new NormalRouteHandler() 
-      })
-    }
+
+  post<
+    TPath extends string,
+    THandler extends (arg: (TArgs extends undefined ? URecord : TArgs) & (THandlerHooks["beforeRequest"] extends undefined ? {} : ReturnType<Last<THandlerHooks["beforeRequest"]>>)
+    ) => unknown,
+    TArgs extends URecord | undefined,
+    THandlerHooks extends {
+      beforeRequest?: [((arg) => unknown),...(() => unknown)[]]
+    } 
+  >(v: {
+    path: TPath,
+    handeler: THandler,
+    args?: TArgs, // this applies a beforeHandler gaurd hook with passthrough  which makes a mutation of the previous type and the next combining them  and only overwriting properties which it has explicitely defined itself 
+    hooks? : THandlerHooks
+  }): this {
+    return
+  }
+
+
 
   /**
    * Adds a route from a typed function.
@@ -157,7 +197,7 @@ export class Blazy extends RouterObject<{}, {}> {
   fromFunc<
     TName extends string,
     TFunc extends IFunc<TName, any, any>,
-  >(name: TName, func: TFunc) {
+  >(name: TName, func: TFunc): this {
     return this.addRoute({
       routeMatcher: new NormalRouting(),
       handler: new FunctionRouteHandler(func)
@@ -167,11 +207,14 @@ export class Blazy extends RouterObject<{}, {}> {
   /**
    * Adds a route from a normal function.
    * Converts the function to a typed function and adds it as a route.
+   * Creats a REST endpoint
+   * Automatically adds the result to the response body 
    * @param name - The name of the route.
    * @param func - The normal function to add as a route.
    * @template TFunc - The function type.
    * @template TName - The name type.
    * @returns The result of adding the route.
+   *
    */
   fromNormalFunc<
     TFunc extends (arg: { body: URecord }) => unknown,
@@ -179,4 +222,44 @@ export class Blazy extends RouterObject<{}, {}> {
   >(name: TName, func: TFunc) {
     return this.fromFunc(name, NormalFunc.fromFunc(func, name))
   }
+
+
+  /*
+    json rpc version of routify
+  */
+  rpcRoutify()
+
+  /*
+  exposes a JSON RPC standard abiding the JSON rpc spec input and output, that is different from fromFunction which turns it into REST instead 
+  */
+  rpcFromFunction() { }
+
+
+  object<T extends URecord>(obj: T, mode: )
+
+  /* proppiatary handler aims to achieve a mixture of good performace while still maintaing safety  
+  
+    comes from blazy rpc 
+  */
+  brpc() { }
+
+  brpcFromFuncton() {
+
+  }
+
+
+  brpcRoutify() { }
+
+
+  applySubRouter<T extends Blazy>(v: Blazy) {
+
+  }
+
+
+  applySubrouterInline<Treturn extends Blazy>(func: (subRouter: this) => Treturn): this { } // so that we preserve intellisense 
+
+  createSubrouter(): this { // so that we preserve intellisnse however note that you can define a subrouter in different file that way because it will create circular dependnecy 
+
+  }
+
 }
