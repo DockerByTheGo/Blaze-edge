@@ -15,7 +15,6 @@ function deepMerge<A extends Record<string, unknown>, B extends Record<string, u
                 if (isPlainObject(av) && isPlainObject(bv)) {
                         out[key] = deepMerge(av as Record<string, unknown>, bv as Record<string, unknown>)
                 } else {
-                        // B wins (overwrites), including arrays and primitives
                         out[key] = bv
                 }
         }

@@ -1,14 +1,14 @@
 import type { URecord } from "@blazyts/better-standard-library";
 import { Blazy } from "../src/core";
-import { tap } from "../src/hooks";
 import { add } from "../src/hooks/helpers/add";
+import { Hooks } from "@blazyts/backend-lib/src/core/types/Hooks/Hooks";
 
-function processPaymentUsingStripe(v: {amount: string}){
+function processPaymentUsingStripe(v: { amount: string }) {
     //...
 }
 
 class User {
-    public get name(){
+    public get name() {
         return ""
     }
 }
@@ -20,40 +20,50 @@ class UserRepo {
 }
 
 
-const derviveUser = (r: {haeders: string}) => add(r, {user: new User()})
+const derviveUser = (r: { haeders: string }) => add(r, { user: new User() })
 
-new Blazy()
-.post({
-    path: "/jiji",
-    handeler: v => v,
-    args:{koko: ""},
-    hooks: {
-        beforeRequest: [derviveUser]
-    }
-}) // for now we should pass as const
-.applySubrouterInline(
-    v => v
-    .addRoute()
-    .addRoute()
-    .addRoute()
-)
-.file("./kiki")
-.fromNormalFunc("callMe", v => processPaymentUsingStripe(v.body))
-.block(app => app.addRoute())
-.beforeRequest({
-    "name": "jo",
-    handler: v => ({ko: ""} as const )
-})
-.beforeRequest({
-    "name": "lolo",
-    handler: tap(ctx => ({ctx: ""}))
-})
+const h = Blazy
+.startEmpty()
+    // .post({
+    //     path: "/jiji",
+    //     handeler: v => v,
+    //     args: { koko: "" },
+    //     hooks: {
+    //         beforeRequest: [derviveUser]
+    //     }
+    // }) // for now we should pass as const
+    .post({
+        path:  "/koko/:koko",
+        hooks: {
+            beforeRequest: v => ({lplp: ""})
+        },
+        args: {
+            body: {ko: ""}
+        },
+        k: {lplp: ""},
+        handeler:v =>{v.body.ko} 
+    })
+
+    // .file("./kiki")
+    // .fromNormalFunc("callMe", v => processPaymentUsingStripe(v.body))
+    // .block(app => app
+    //     .post()
+    //     .post()
+    // )
+    // .beforeHandler({
+    //     "name": "jo",
+    //     handler: v => ({ ko: "" } as const)
+    // })
+    // .beforeHandler({
+    //     "name": "lolo",
+    //     handler: tap(ctx => ({ ctx: "" }))
+    // })
 
 
 
-function jiji<THandler extends (arg: string) => URecord>(config: {name: string, conf: THandler }){
+// function jiji<THandler extends (arg: string) => URecord>(config: { name: string, conf: THandler }) {
 
-}
+// }
 
 
-jiji({name: "", conf: tap(ctx => {return {}})})
+// jiji({ name: "", conf: tap(ctx => { return {} }) })
