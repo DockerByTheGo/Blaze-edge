@@ -59,22 +59,20 @@ export class SimpleRouteFinder {
 
         try {
             const result = handler.handleRequest({ body: body || {} });
-            return new Response(JSON.stringify(result.body), {
+            return {
+                body: result.body,
                 status: 200,
                 headers: { "Content-Type": "application/json" }
-            });
+            };
         } catch (error) {
             console.error(`Handler error for ${path}:`, error);
-            return new Response(
-                JSON.stringify({
-                    error: "Internal error",
-                    message: "An error occurred while processing your request"
-                }),
-                {
-                    status: 500,
-                    headers: { "Content-Type": "application/json" }
-                }
-            );
+            return {
+
+                error: "Internal error",
+                message: "An error occurred while processing your request",
+                status: 500,
+                headers: { "Content-Type": "application/json" }
+            }
         }
     }
 
@@ -95,8 +93,10 @@ export class SimpleRouteFinder {
 
         // Check for exact match
         if (tree[current]) {
+            console.log("found match for ", current)
             return this.traverseTree(tree[current], remaining);
         }
+
 
         // Check for wildcard matches
         for (const key in tree) {
