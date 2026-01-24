@@ -1,7 +1,6 @@
 import type { URecord } from "@blazyts/better-standard-library";
 import { Blazy } from "../src/core";
 import { add } from "../src/hooks/helpers/add";
-import { Hooks } from "@blazyts/backend-lib/src/core/types/Hooks/Hooks";
 
 function processPaymentUsingStripe(v: { amount: string }) {
     //...
