@@ -43,6 +43,10 @@ const h = Blazy
         k: {lplp: ""},
         handeler:v =>{v.body.ko} 
     })
+    .onRequest({name: "koko", handler: v => ({hi: ""})})
+    .onRequest({name: "koko", handler: v => {
+        v.body.hi
+    }})
 
     // .file("./kiki")
     // .fromNormalFunc("callMe", v => processPaymentUsingStripe(v.body))

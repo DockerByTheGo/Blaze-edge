@@ -1,5 +1,5 @@
 import { RouterObject } from "@blazyts/backend-lib";
-import type { IFunc, Last, URecord } from "@blazyts/better-standard-library";
+import type { IFunc, KeyOfOnlyStringKeys, Last, MemberAlreadyPresent, URecord } from "@blazyts/better-standard-library";
 import { BasicValidator, map, NormalFunc, objectEntries, Try } from "@blazyts/better-standard-library";
 import { FunctionRouteHandler } from "./route-handlers/variations/function/FunctionRouteHandler";
 import type { Schema } from "@blazyts/better-standard-library/src/others/validator/schema";
@@ -10,24 +10,40 @@ import type { RouterHooks, RouteTree } from "@blazyts/backend-lib/src/core/serve
 import type { PathStringToObject } from "@blazyts/backend-lib/src/core/server/router/types/PathStringToObject";
 import { HttpRouteHandler } from "./route-handlers/variations";
 import { ComplexRouteFinder } from "./route-finders/complex";
+import { HookStackManager, type HooksStack } from "./hooks/stack";
 
 /**
  * Main Blazy framework class that extends RouterObject for building backend applications.
  * Provides methods for adding services, authentication, routing, and request handling.
  */
+type LooseAutocomplete<T extends string> = T | Omit<string, T>
 
 export type BlazyInstance = Blazy<{
   beforeRequest: [], afterRequest: []
 }, {}>
 
+
 export class Blazy<
-  TRouterHooks extends RouterHooks,
+  TRouterHooks extends HooksStack,
   TRoutes extends RouteTree
 > extends RouterObject<
-  TRouterHooks,
+  {
+    beforeRequest: Hooks<[
+      ...TRouterHooks["beforeHandler"]["onRequest"]["v"]
+    ]>,
+    afterRequest: Hooks<[
+      ...TRouterHooks["afterHandler"]["afterResponse"]["v"],
+    ]>
+  },
   TRoutes
 > {
-  constructor(v: { routes: TRoutes, hooks: TRouterHooks }) {
+
+
+
+  constructor(
+    routes: TRoutes,
+    public hooks: HookStackManager<TRouterHooks>
+  ) {
     // const cache = new Cache();
     super({
       beforeRequest: Hooks.empty(),
@@ -37,7 +53,29 @@ export class Blazy<
     });
     // this.addService("name", cache);
   }
-
+  onRequest<
+    TName extends string,
+    // LooseAutocomplete<TRouterHooks["beforeHandler"]["onRequest"]["TGetHookNames"]>,
+    THandler extends (arg: TRouterHooks["beforeHandler"]["onRequest"]["TGetLastHookReturnType"]) => unknown
+  >(v:
+    {
+      name: TName,
+      handler: THandler
+    }): TName extends KeyOfOnlyStringKeys<TRouterHooks["beforeHandler"]["onRequest"]["TGetHookNames"][number]>
+    ? MemberAlreadyPresent<"hook with this name already exisits">
+    : Blazy<
+      TRouterHooks & {
+        beforeHandler: {
+          onRequest: Hooks<[
+            ...TRouterHooks["beforeHandler"]["onRequest"]["v"]],
+            Hook<TName, THandler>
+          >
+        }
+      },
+      TRoutes
+    > {
+    return
+  }
   /**
    * Adds a service to the Blazy instance, making it available through hooks.
    * @param name - The name of the service.
@@ -68,10 +106,6 @@ export class Blazy<
   which takes the js object and transforms it into the RequestHelper object 
   
   */
-  onRequestHook() {
-
-  }
-
   /**
    * Sets up pre-authentication logic.
    * This method configures hooks that run before authentication.
@@ -374,17 +408,34 @@ export class Blazy<
   }
 
   static startEmpty() {
-    return new Blazy({
-      hooks: {
-        beforeRequest: Hooks
-          .empty()
-          .add({
-            name: "prvide req",
+    return new Blazy(
+      {},
+      new HookStackManager({
+        beforeHandler: {
+          onRequest: Hooks.empty().add({
+            name: "provide req",
             handler: v => ({ body: { hi: "" } })
           }),
-        afterRequest: Hooks.new()
-      },
-      routes: {}
-    })
+          beforeAuth: Hooks.empty().add({
+            name: "provide req",
+            handler: v => ({ body: { hi: "" } })
+          }),
+          auth: Hooks.empty().add({
+            name: "provide req",
+            handler: v => ({ body: { hi: "" } })
+          })
+        },
+        afterHandler: {
+          beforeResponse: Hooks.empty().add({
+            name: "provide req",
+            handler: v => ({ body: { hi: "" } })
+          }),
+          afterResponse: Hooks.empty().add({
+            name: "provide req",
+            handler: v => ({ body: { hi: "" } })
+          })
+        }
+      })
+    )
   }
 }
