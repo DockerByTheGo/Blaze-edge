@@ -1,5 +1,5 @@
 import type { IRouteHandler } from "@blazyts/backend-lib/src/core/server/router/routeHandler";
-import type { File } from "node:buffer";
+import { File } from "node:buffer";
 import fs from "node:fs";
 
 
@@ -19,5 +19,5 @@ export class FileRouteHandler implements IRouteHandler<
 
   getClientRepresentation: {
     call(): File
-  } = {call: () => } // TODO
+  } = {call: () => 4} // TODO
 }

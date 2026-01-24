@@ -1,34 +1,81 @@
 import { RouterObject } from "@blazyts/backend-lib";
-import type { RouterHooks, RouteTree } from "@blazyts/backend-lib/src/core/server/router/types";
-import type { IFunc, Last, URecord } from "@blazyts/better-standard-library";
+import type { IFunc, KeyOfOnlyStringKeys, Last, MemberAlreadyPresent, URecord } from "@blazyts/better-standard-library";
 import { BasicValidator, map, NormalFunc, objectEntries, Try } from "@blazyts/better-standard-library";
 import { FunctionRouteHandler } from "./route-handlers/variations/function/FunctionRouteHandler";
 import type { Schema } from "@blazyts/better-standard-library/src/others/validator/schema";
 import { Path } from "@blazyts/backend-lib/src/core/server/router/utils/path/Path";
-import { FileRouteHandler } from "./route-handlers/variations";
-import { DSLRouting } from "./route-matchers/dsl/main";
 import { NormalRouting } from "./route-matchers/normal";
-import type { Hook, Hooks } from "@blazyts/backend-lib/src/core/types/Hooks/Hooks";
+import { Hook, Hooks } from "@blazyts/backend-lib/src/core/types/Hooks/Hooks";
+import type { RouterHooks, RouteTree } from "@blazyts/backend-lib/src/core/server/router/hooks";
+import type { PathStringToObject } from "@blazyts/backend-lib/src/core/server/router/types/PathStringToObject";
+import { HttpRouteHandler } from "./route-handlers/variations";
+import { ComplexRouteFinder } from "./route-finders/complex";
+import { HookStackManager, type HooksStack } from "./hooks/stack";
 
 /**
  * Main Blazy framework class that extends RouterObject for building backend applications.
  * Provides methods for adding services, authentication, routing, and request handling.
  */
-export class Blazy extends RouterObject<{
-  beforeRequest: Hooks<[]>,
-  afterRequest: Hooks<[]>,
+type LooseAutocomplete<T extends string> = T | Omit<string, T>
 
-}, {}> {
-  /**
-   * Creates a new instance of Blazy.
-   * Initializes with a cache service.
-   */
-  constructor() {
-    const cache = new Cache();
-    super();
-    this.addService("name", cache);
+export type BlazyInstance = Blazy<{
+  beforeRequest: [], afterRequest: []
+}, {}>
+
+
+export class Blazy<
+  TRouterHooks extends HooksStack,
+  TRoutes extends RouteTree
+> extends RouterObject<
+  {
+    beforeRequest: Hooks<[
+      ...TRouterHooks["beforeHandler"]["onRequest"]["v"]
+    ]>,
+    afterRequest: Hooks<[
+      ...TRouterHooks["afterHandler"]["afterResponse"]["v"],
+    ]>
+  },
+  TRoutes
+> {
+
+
+
+  constructor(
+    routes: TRoutes,
+    public hooks: HookStackManager<TRouterHooks>
+  ) {
+    // const cache = new Cache();
+    super({
+      beforeRequest: Hooks.empty(),
+      afterRequest: Hooks.empty()
+    }, {}, (routes, path) => {
+      new ComplexRouteFinder().findRoute(path.path)
+    });
+    // this.addService("name", cache);
   }
-
+  onRequest<
+    TName extends string,
+    // LooseAutocomplete<TRouterHooks["beforeHandler"]["onRequest"]["TGetHookNames"]>,
+    THandler extends (arg: TRouterHooks["beforeHandler"]["onRequest"]["TGetLastHookReturnType"]) => unknown
+  >(v:
+    {
+      name: TName,
+      handler: THandler
+    }): TName extends KeyOfOnlyStringKeys<TRouterHooks["beforeHandler"]["onRequest"]["TGetHookNames"][number]>
+    ? MemberAlreadyPresent<"hook with this name already exisits">
+    : Blazy<
+      TRouterHooks & {
+        beforeHandler: {
+          onRequest: Hooks<[
+            ...TRouterHooks["beforeHandler"]["onRequest"]["v"]],
+            Hook<TName, THandler>
+          >
+        }
+      },
+      TRoutes
+    > {
+    return
+  }
   /**
    * Adds a service to the Blazy instance, making it available through hooks.
    * @param name - The name of the service.
@@ -47,13 +94,22 @@ export class Blazy extends RouterObject<{
    * Sets up authentication for the application.
    * This method configures hooks for authentication.
    */
-  auth() {
+  auth() { // this is a middleware which runs right after the last before auth hook 
 
   } // sets a hook for authentication 
 
+  /*
+  
+  the first hook which is being ran when a new req is recieved
+
+  there are three types of hooks which are of type onRequest by default, they are called parse -> transforms json string into js object. Before transform 
+  which takes the js object and transforms it into the RequestHelper object 
+  
+  */
   /**
    * Sets up pre-authentication logic.
    * This method configures hooks that run before authentication.
+   * it runs right after the last onRequest hook 
    */
   beforeAuth() {
 
@@ -79,13 +135,56 @@ export class Blazy extends RouterObject<{
 
   /**
    * Converts an object with functions into routes.
-   * If the object has an `isCrudified` property, it treats it as CRUD operations.
-   * Otherwise, it adds each function as a POST route.
+   * If smart is true, intelligently routes based on property names:
+   * - Contains "get" -> GET route
+   * - Contains "create" -> POST route
+   * - Contains "update" -> PATCH route
+   * - Otherwise -> POST route
+   * If smart is false and object has `isCrudified` property, treats it as CRUD operations.
+   * Otherwise, adds each function as a POST route.
    * @param v - The object containing functions to be routed.
-   * @template T - The type of the object.
+   * @param smart - Whether to use intelligent routing based on property names.
+   * @template TObject - The type of the object.
    */
-  routify<T extends Record<string, unknown>>(v: T) {
-    if (v.isCrudified) {
+  routifySmart<
+    TObject extends Record<string, unknown>,
+    TSmart extends boolean
+  >(
+    v: TObject,
+    smart: TSmart
+  ): Blazy<
+    TRouterHooks,
+    TSmart extends true
+    ? TRoutes & {
+      [K in keyof TObject as
+      K extends `${infer _}get${infer __}` ? "GET" :
+      K extends `${infer _}Get${infer __}` ? "GET" :
+      K extends `${infer _}create${infer __}` ? "POST" :
+      K extends `${infer _}Create${infer __}` ? "POST" :
+      K extends `${infer _}update${infer __}` ? "PATCH" :
+      K extends `${infer _}Update${infer __}` ? "PATCH" :
+      "POST"
+      ]: TObject[K]
+    }
+    : TRoutes & { [K in keyof TObject]: "POST" }
+  > {
+
+    if (smart) {
+      objectEntries(v)
+        .filter(([key, val]) => typeof val === "function")
+        .forEach(([key, value]) => {
+          const keyStr = String(key).toLowerCase();
+          if (keyStr.includes("get")) {
+            this.get(key, value);
+          } else if (keyStr.includes("create")) {
+            this.post(key, value);
+          } else if (keyStr.includes("update")) {
+            this.patch(key, value);
+          } else {
+            this.post(key, value);
+          }
+        });
+    } else if (v.isCrudified) {
       Object.entries(v).filter(([key, val]) => typeof val === "function").forEach(([key, value]) => {
         this[key](key, value);
       });
@@ -95,22 +194,26 @@ export class Blazy extends RouterObject<{
         this.post(key, value);
       });
     }
+
+    return this
   }
 
   routifyRpc() { }
 
   // allows you to call multiple methods on the app while using the app object, this allosws for use cases where you may need to access the app object but do not wanna breake method chaining for example 
   /*
-  
+   
     const app = new Blazy().addRoute().addRoute().block(console.log)
-  
+   
     // without it you will have to break the method chaining to console log at this current point since yeah you could at thend but then it will also have applied methods which you do not wanna observer 
   */
 
 
 
 
-  block<TReturn extends Blazy>(func: (app: this) => TReturn): TReturn { }
+  block<TReturn extends BlazyInstance>(func: (app: this) => TReturn): TReturn {
+    return func(this)
+  }
 
   /**
    * Adds a simple route for a function with schema validation.
@@ -169,19 +272,51 @@ export class Blazy extends RouterObject<{
 
   post<
     TPath extends string,
-    THandler extends (arg: (TArgs extends undefined ? URecord : TArgs) & (THandlerHooks["beforeRequest"] extends undefined ? {} : ReturnType<Last<THandlerHooks["beforeRequest"]>>)
-    ) => unknown,
     TArgs extends URecord | undefined,
     THandlerHooks extends {
-      beforeRequest?: [((arg) => unknown),...(() => unknown)[]]
-    } 
+      // beforeRequest?: Hooks<[
+      //   Hook<
+      //     "initial",
+      //     (arg: TRouterHooks["beforeRequest"]["TGetLastHookReturnType"]) => TRouterHooks["beforeRequest"]["TGetLastHookReturnType"]
+      //   >,
+      //   ...(Hook<string,any>)[]
+      // ]>
+      beforeRequest: (arg: TRouterHooks["beforeRequest"]["TGetLastHookReturnType"]) => unknown
+    },
+    THandler extends (
+      arg:
+        (
+          TArgs extends undefined
+          ? URecord
+          : TArgs
+        ) & ReturnType<THandlerHooks["beforeRequest"]>
+      // &
+      // (
+      //   THandlerHooks["beforeRequest"] extends undefined
+      //   ? {} 
+      //   : ReturnType<THandlerHooks["beforeRequest"]>
+      // )
+    ) => unknown
   >(v: {
+
     path: TPath,
     handeler: THandler,
     args?: TArgs, // this applies a beforeHandler gaurd hook with passthrough  which makes a mutation of the previous type and the next combining them  and only overwriting properties which it has explicitely defined itself 
-    hooks? : THandlerHooks
-  }): this {
-    return
+    hooks?: THandlerHooks,
+
+  }
+  ):
+
+    Blazy<
+      TRouterHooks,
+      TRoutes & PathStringToObject<TPath, HttpRouteHandler<TArgs, ReturnType<THandler>>>
+    > {
+    this.addRoute({
+      routeMatcher: new NormalRouting(v.path),
+      handler: new HttpRouteHandler({}, v => {
+
+      })
+    })
   }
 
 
@@ -223,6 +358,16 @@ export class Blazy extends RouterObject<{
     return this.fromFunc(name, NormalFunc.fromFunc(func, name))
   }
 
+  fromNormalFunc<
+    TFunc extends (arg: { body: URecord }) => unknown,
+    TName extends string,
+    TMode extends "REST" | "WEBSOCKET_REQUEST_RESPONSE" | "RPC" | "JSON-RPC"
+  >(name: TName, func: TFunc, mode: TMode) {
+    switch (mode) {
+      case "JSON-RPC":
+
+    }
+  }
 
   /*
     json rpc version of routify
@@ -235,10 +380,10 @@ export class Blazy extends RouterObject<{
   rpcFromFunction() { }
 
 
-  object<T extends URecord>(obj: T, mode: )
+  object<T extends URecord>(obj: T, mode: "")
 
   /* proppiatary handler aims to achieve a mixture of good performace while still maintaing safety  
-  
+   
     comes from blazy rpc 
   */
   brpc() { }
@@ -262,4 +407,35 @@ export class Blazy extends RouterObject<{
 
   }
 
+  static startEmpty() {
+    return new Blazy(
+      {},
+      new HookStackManager({
+        beforeHandler: {
+          onRequest: Hooks.empty().add({
+            name: "provide req",
+            handler: v => ({ body: { hi: "" } })
+          }),
+          beforeAuth: Hooks.empty().add({
+            name: "provide req",
+            handler: v => ({ body: { hi: "" } })
+          }),
+          auth: Hooks.empty().add({
+            name: "provide req",
+            handler: v => ({ body: { hi: "" } })
+          })
+        },
+        afterHandler: {
+          beforeResponse: Hooks.empty().add({
+            name: "provide req",
+            handler: v => ({ body: { hi: "" } })
+          }),
+          afterResponse: Hooks.empty().add({
+            name: "provide req",
+            handler: v => ({ body: { hi: "" } })
+          })
+        }
+      })
+    )
+  }
 }

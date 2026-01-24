@@ -1,3 +1,5 @@
+import { RouteBuilder } from "./variations";
+
 type RemoveStringFromStringUnion<Union extends string, StringToREmove extends Union> = Union extends StringToREmove ? never : Union;
 
 type IsDynamic<T extends string> = T extends `:${string}` ? true : false;

@@ -27,7 +27,7 @@ export type WebSocketContext = {
 };
 
 export class WebsocketRouteHandler<
-    TMessage extends WebSocketMessage = WebSocketMessage,
+    TMessage extends WebSocketMessage ,
     TResponse extends WebSocketResponse = WebSocketResponse,
 > implements IRouteHandler<TMessage, TResponse> {
 
@@ -43,6 +43,10 @@ export class WebsocketRouteHandler<
         }
     ) {
         this.startHeartbeat();
+    }
+
+    handle(message: TMessage): TResponse {
+        return this.handleRequest(message);
     }
 
     handleRequest(message: TMessage): TResponse {
