@@ -205,7 +205,7 @@ export class Blazy extends RouterObject<{
   }
 
 
-  notFound() { }
+  notFound() { } // can be stacked and overwritten to
 
   post<
     THandler extends (arg: TArgs extends undefined ? URecord : TArgs) => unknown,
@@ -241,7 +241,7 @@ export class Blazy extends RouterObject<{
 
   get<
     TPath extends string,
-    THandler extends (arg: TArgs extends undefined ? URecord : TArgs & ExtractParams<TPath>) => unknown,
+    THandler extends (arg: (TArgs extends undefined ? URecord : TArgs) & ExtractParams<TPath> ) => unknown,
     TArgs extends URecord | undefined
   >(config: {
     path: TPath,
