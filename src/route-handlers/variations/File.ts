@@ -19,5 +19,5 @@ export class FileRouteHandler implements IRouteHandler<
 
   getClientRepresentation: {
     call(): File
-  } = {call: () => } // TODO
+  } = {call: () => {}} // TODO
 }

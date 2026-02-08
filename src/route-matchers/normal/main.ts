@@ -1,3 +1,5 @@
+import { RouteBuilder } from "./variations";
+
 type RemoveStringFromStringUnion<Union extends string, StringToREmove extends Union> = Union extends StringToREmove ? never : Union;
 
 type IsDynamic<T extends string> = T extends `:${string}` ? true : false;
@@ -23,6 +25,6 @@ export type ExtractParams<
 
 type k = ExtractParams<"/users/:userId/posts/:postId/">;
 
-const g = RouteBuilder
-  .new({ type: "number", name: "userId" })
-  .addDynamicParam("postId", "number");
+// const g = RouteBuilder
+//   .new({ type: "number", name: "userId" })
+//   .addDynamicParam("postId", "number");

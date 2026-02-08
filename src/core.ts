@@ -1,14 +1,14 @@
 import { RouterObject } from "@blazyts/backend-lib";
 import type { RouterHooks, RouteTree } from "@blazyts/backend-lib/src/core/server/router/types";
 import type { IFunc, URecord } from "@blazyts/better-standard-library";
-import { BasicValidator, map, NormalFunc, objectEntries, Try } from "@blazyts/better-standard-library";
+import { BasicValidator, ifNotNone, map, NormalFunc, objectEntries, Optionable, Try } from "@blazyts/better-standard-library";
 import { FunctionRouteHandler } from "./route-handlers/variations/function/FunctionRouteHandler";
 import type { Schema } from "@blazyts/better-standard-library/src/others/validator/schema";
 import { Path } from "@blazyts/backend-lib/src/core/server/router/utils/path/Path";
 import { FileRouteHandler, NormalRouteHandler } from "./route-handlers/variations";
 import { DSLRouting } from "./route-matchers/dsl/main";
-import { NormalRouting } from "./route-matchers/normal";
-import type { Hook, Hooks } from "@blazyts/backend-lib/src/core/types/Hooks/Hooks";
+import { NormalRouting, type ExtractParams } from "./route-matchers/normal";
+import { Hooks, type Hook } from "@blazyts/backend-lib/src/core/types/Hooks/Hooks";
 
 /**
  * Main Blazy framework class that extends RouterObject for building backend applications.
@@ -24,9 +24,41 @@ export class Blazy extends RouterObject<{
    * Initializes with a cache service.
    */
   constructor() {
-    const cache = new Cache();
-    super();
-    this.addService("name", cache);
+    // const cache = new Cache();
+    super(
+
+            {
+                beforeRequest: Hooks.empty(),
+                afterRequest: Hooks.empty(),
+            },
+            {
+            },
+            (routes, path) => {
+                const segments = path.parts.map(p => p.part);
+                let current: any = routes;
+                for (const segment of segments) {
+                    if (!current || typeof current !== 'object') return Optionable.none();
+                    if (current[segment] !== undefined) {
+                        current = current[segment];
+                        continue;
+                    }
+                    const paramKey = Object.keys(current).find(k => k.startsWith(':'));
+                    if (paramKey) {
+                        current = current[paramKey];
+                        continue;
+                    }
+                    return Optionable.none();
+                }
+                if (typeof current === 'function') {
+                    return Optionable.some(current);
+                } else if (current && 'handleRequest' in current) {
+                    return Optionable.some((req: Request) => current.handleRequest(req));
+                }
+                return Optionable.none();
+            }
+
+    );
+    // this.addService("name", cache);
   }
 
   /**
@@ -162,11 +194,13 @@ export class Blazy extends RouterObject<{
       path: TPath,
       handler: Thandler,
       schema?: Args
-    }) {
-    return this.addRoute({
+    }): Blazy {
+    this.addRoute({
       routeMatcher: new DSLRouting(v.path),
       handler: new NormalRouteHandler(v.handler)
     })
+
+    return this
   }
 
 
@@ -179,7 +213,7 @@ export class Blazy extends RouterObject<{
   >(config: { path?: TPath, handeler: THandler, args?: TArgs }): this {
 
     return this.http({
-      path: v.path,
+      path: config.path ?? "/",
       handler: v =>
         v.verb === "POST"
           ? config.handeler(v)
@@ -191,7 +225,10 @@ export class Blazy extends RouterObject<{
   getAll<
     THandler extends (arg: TArgs extends undefined ? URecord : TArgs) => unknown,
     TArgs extends URecord | undefined
-  >(config: { args?: TArgs, handler: THandler }) {
+  >(config: {
+    args?: TArgs,
+    handler: THandler
+  }) {
 
     return this.get({
       path: "/all",
@@ -203,13 +240,13 @@ export class Blazy extends RouterObject<{
 
   get<
     TPath extends string,
-    THandler extends (arg: TArgs extends undefined ? URecord : TArgs) => unknown,
+    THandler extends (arg: TArgs extends undefined ? URecord : TArgs & ExtractParams) => unknown,
     TArgs extends URecord | undefined
   >(config: {
     path: TPath,
     handler: THandler,
     args: TArgs
-  }) {
+  }): Blazy {
 
     return this.http({
       path: config.path,

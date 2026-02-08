@@ -5,8 +5,7 @@ import { Optionable } from "@blazyts/better-standard-library/src/data_structures
 
 import { extractParams, type ExtractParams } from "./types/extractParams";
 
-import { getParts } from "../utils/getParts";
-import type { RouteMAtcher } from "@blazyts/backend-lib";
+import { getParts, type RouteMAtcher } from "@blazyts/backend-lib";
 
 const IsDynamic = (s: string) => s[0] === ":";
 
@@ -34,9 +33,9 @@ export class DSLRouting<TRoute extends string> implements RouteMAtcher<ExtractPa
 
   }
 
-  TGetRouteString = panic("not implemented") as any;
+  get TGetRouteString() { panic("not implemented") as any }
   getRouteString() { return this.matcher; }
-  TGetContextType: ExtractParams<TRoute> = panicTypeOnlyVariable() as any;
+  get TGetContextType(): ExtractParams<TRoute> {  return panicTypeOnlyVariable() as any}
 
   typeInfo: TypeMarker<string> = new TypeMarker("");
 
