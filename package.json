@@ -10,5 +10,8 @@
     "@blazyts/backend-lib": "workspace:*",
     "@blazyts/better-standard-library": "workspace:*",
     "@types/bun": "latest"
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
   }
 }

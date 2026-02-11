@@ -7,8 +7,11 @@ import type { Schema } from "@blazyts/better-standard-library/src/others/validat
 import { Path } from "@blazyts/backend-lib/src/core/server/router/utils/path/Path";
 import { FileRouteHandler, NormalRouteHandler } from "./route-handlers/variations";
 import { DSLRouting } from "./route-matchers/dsl/main";
-import { NormalRouting, type ExtractParams } from "./route-matchers/normal";
+import { NormalRouting, } from "./route-matchers/normal";
 import { Hooks, type Hook } from "@blazyts/backend-lib/src/core/types/Hooks/Hooks";
+import type { ExtractParams } from "./route-matchers/dsl/types/extractParams";
+import { treeRouteFinder } from "./route-finders";
+import z from "zod/v4";
 
 /**
  * Main Blazy framework class that extends RouterObject for building backend applications.
@@ -27,36 +30,13 @@ export class Blazy extends RouterObject<{
     // const cache = new Cache();
     super(
 
-            {
-                beforeRequest: Hooks.empty(),
-                afterRequest: Hooks.empty(),
-            },
-            {
-            },
-            (routes, path) => {
-                const segments = path.parts.map(p => p.part);
-                let current: any = routes;
-                for (const segment of segments) {
-                    if (!current || typeof current !== 'object') return Optionable.none();
-                    if (current[segment] !== undefined) {
-                        current = current[segment];
-                        continue;
-                    }
-                    const paramKey = Object.keys(current).find(k => k.startsWith(':'));
-                    if (paramKey) {
-                        current = current[paramKey];
-                        continue;
-                    }
-                    return Optionable.none();
-                }
-                if (typeof current === 'function') {
-                    return Optionable.some(current);
-                } else if (current && 'handleRequest' in current) {
-                    return Optionable.some((req: Request) => current.handleRequest(req));
-                }
-                return Optionable.none();
-            }
-
+      {
+        beforeRequest: Hooks.empty(),
+        afterRequest: Hooks.empty(),
+      },
+      {
+      },
+      treeRouteFinder
     );
     // this.addService("name", cache);
   }
@@ -187,13 +167,13 @@ export class Blazy extends RouterObject<{
     })
   }
 
-  http<
+  private http<
     TPath extends string,
     Thandler extends (arg: Args extends null ? URecord : Args
     ) => unknown, Args extends URecord | null = null>(v: {
       path: TPath,
       handler: Thandler,
-      schema?: Args
+      args?: Args
     }): Blazy {
     this.addRoute({
       routeMatcher: new DSLRouting(v.path),
@@ -204,11 +184,11 @@ export class Blazy extends RouterObject<{
   }
 
 
-  notFound() { }
+  notFound() { } // can be stacked and overwritten to
 
   post<
-    THandler extends (arg: TArgs extends undefined ? URecord : TArgs) => unknown,
-    TArgs extends URecord | undefined,
+    THandler extends (arg: (TArgs extends undefined ? URecord : z.infer<TArgs>) & ExtractParams<TPath>) => unknown,
+    TArgs extends z.ZodObject | undefined,
     TPath extends string = "/",
   >(config: { path?: TPath, handeler: THandler, args?: TArgs }): this {
 
@@ -231,7 +211,7 @@ export class Blazy extends RouterObject<{
   }) {
 
     return this.get({
-      path: "/all",
+      path: "/",
       handler: config.handler,
       args: config.args
     })
@@ -240,7 +220,7 @@ export class Blazy extends RouterObject<{
 
   get<
     TPath extends string,
-    THandler extends (arg: TArgs extends undefined ? URecord : TArgs & ExtractParams) => unknown,
+    THandler extends (arg: (TArgs extends undefined ? URecord : TArgs) & ExtractParams<TPath>) => unknown,
     TArgs extends URecord | undefined
   >(config: {
     path: TPath,
