@@ -21,7 +21,6 @@ function getParamType(s: ("(" | "$") & {}): Optionable<"date" | "number"> {
 
   const symbols = [...types.map(v => v.date || v.number)];
   const names = [...types.map(v => v.date ? "date" : "number")];
-  console.log(symbols);
 
   return symbols.includes(s)
     ? Optionable.new(names[symbols.indexOf(s)])
@@ -54,7 +53,6 @@ export class DSLRouting<TRoute extends string> implements RouteMAtcher<ExtractPa
         ParamType.try({
           ifNone: () => g[paramName] = currentRoutePart as string,
           ifNotNone: (v) => {
-            console.log("f", v);
             switch (v) {
               case "date":
                 g[paramName] = new Date(currentRoutePart);

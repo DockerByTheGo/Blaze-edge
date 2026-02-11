@@ -16,7 +16,6 @@ function withStaticNew<T extends new (...args: any[]) => any>(Class: T) {
 }
 
 
-@withStaticNew
 export class NormalRouteHandler<
   TCtx extends { body: URecord },
   TReturn extends { body: URecord },

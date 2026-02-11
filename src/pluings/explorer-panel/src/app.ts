@@ -11,6 +11,7 @@ import swaggerui from "swagger-ui-express";
 import {
   z,
 } from "zod";
+import {LOG} from "@blazyts/better-standard-library"
 
 import type { ApiPath } from "./types/apiApth";
 import type { HttpVerb } from "./types/networking/httpVVerbs";
@@ -350,7 +351,7 @@ export class WebRouter<ContextType> {
         const pathParamsEntity = zodSchemaIntoOpenapiResponseContentDefinition(
           validator.params,
         );
-        console.log(
+        LOG(
           "zod schema into params",
           "zod",
           validator.params,
@@ -391,9 +392,6 @@ export class WebRouter<ContextType> {
           response as ZodObject<any>,
         );
 
-        console.log(76767676767676);
-        console.log(parsedObj);
-        console.log(76767676767676);
         return {
           [parsedObj.properties.statusCode]: {
             content: {
@@ -506,15 +504,15 @@ export class WebRouter<ContextType> {
       }),
     );
     this.port.ifCanBeUnpacked((v) => {
-      console.log("port is already set above");
+      LOG("port is already set above");
       app.listen(v.value, () => {
-        console.log(`Server is running on port ${v.value}`);
+        LOG(`Server is running on port ${v.value}`);
       });
     });
 
     if (alreadyDefined) {
       app.listen(port.value, () => {
-        console.log(`Server is running on port ${port.value}`);
+        LOG(`Server is running on port ${port.value}`);
       });
     }
   }
