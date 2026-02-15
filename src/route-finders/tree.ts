@@ -36,6 +36,7 @@ const isRouteHandler = (value: any): value is IRouteHandler<Request, any> => {
  * }
  */
 export const treeRouteFinder: RouteFinder<RouteTree> = (routesTree, path) => {
+    console.log(routesTree)
     const pathParts = path.parts.map(part => part.part);
 
     /**
@@ -47,12 +48,12 @@ export const treeRouteFinder: RouteFinder<RouteTree> = (routesTree, path) => {
     const traverse = (
         currentNode: RouteTree,
         remainingParts: string[]
-    ): Optionable<(req: Request) => unknown> => {
+    ): Optionable<IRouteHandler<Request, any>> => {
         // If no more parts to match, check if current node has a "/" handler
         if (remainingParts.length === 0) {
             const rootHandler = currentNode["/"];
             if (rootHandler && isRouteHandler(rootHandler)) {
-                return Optionable.some((req: Request) => rootHandler.handleRequest(req));
+                return Optionable.some(rootHandler);
             }
             return Optionable.none();
         }
