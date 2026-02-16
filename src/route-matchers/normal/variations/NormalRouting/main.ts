@@ -1,7 +1,7 @@
-import type { Optionable, TypeMarker } from "@blazyts/better-standard-library";
+import { panicTypeOnlyVariable, type Optionable, type TypeMarker } from "@blazyts/better-standard-library";
 
-import type { RouteMAtcher } from "../../../types";
 import type { ExtractParams } from "../../main";
+import type { RouteMAtcher } from "@blazyts/backend-lib";
 
 export class NormalRouting<T extends string> implements RouteMAtcher<ExtractParams<T>> {
   type = "normal";
@@ -12,7 +12,7 @@ export class NormalRouting<T extends string> implements RouteMAtcher<ExtractPara
     return this.routeString;
   }
 
-  TGetRouteString: T;
+  TGetRouteString: T = (() => panicTypeOnlyVariable()) as any;
 
   typeInfo: TypeMarker<string>;
 

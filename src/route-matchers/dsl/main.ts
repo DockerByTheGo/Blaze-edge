@@ -23,7 +23,7 @@ function getParamType(s: ("(" | "$") & {}): Optionable<"date" | "number"> {
   const names = [...types.map(v => v.date ? "date" : "number")];
 
   return symbols.includes(s)
-    ? Optionable.new(names[symbols.indexOf(s)])
+    ? Optionable.some(names[symbols.indexOf(s)])
     : Optionable.none();
 }
 
@@ -32,9 +32,9 @@ export class DSLRouting<TRoute extends string> implements RouteMAtcher<ExtractPa
 
   }
 
-  get TGetRouteString() { panic("not implemented") as any }
-  getRouteString() { return this.matcher; }
-  get TGetContextType(): ExtractParams<TRoute> {  return panicTypeOnlyVariable() as any}
+  TGetRouteString: string = () => panicTypeOnlyVariable("")
+  getRouteString() { return this.matcher.replaceAll("$", "").replaceAll("^", "") }
+  get TGetContextType(): ExtractParams<TRoute> { return panicTypeOnlyVariable() as any }
 
   typeInfo: TypeMarker<string> = new TypeMarker("");
 
@@ -50,20 +50,35 @@ export class DSLRouting<TRoute extends string> implements RouteMAtcher<ExtractPa
       if (IsDynamic(currentMatcherPart)) {
         const paramName = currentMatcherPart.slice(1, currentMatcherPart.length - 1);
         const ParamType = getParamType(currentMatcherPart[currentMatcherPart.length - 1]);
-        ParamType.try({
-          ifNone: () => g[paramName] = currentRoutePart as string,
+
+        const conversionFailed = ParamType.try({
+          ifNone: () => {
+            g[paramName] = currentRoutePart as string;
+            return false;
+          },
           ifNotNone: (v) => {
             switch (v) {
               case "date":
-                g[paramName] = new Date(currentRoutePart);
-                break;
+                const date = new Date(currentRoutePart);
+                if (isNaN(date.getTime())) {
+                  return true;
+                }
+                g[paramName] = date;
+                return false;
               case "number":
-                g[paramName] = Number.parseInt(currentRoutePart);
-                break;
+                const num = Number.parseInt(currentRoutePart);
+                if (isNaN(num)) {
+                  return true;
+                }
+                g[paramName] = num;
+                return false;
             }
           },
-
         });
+
+        if (conversionFailed) {
+          return Optionable.none();
+        }
       }
       else {
         if (currentMatcherPart === currentRoutePart) {

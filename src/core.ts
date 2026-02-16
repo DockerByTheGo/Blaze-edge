@@ -18,27 +18,64 @@ import z from "zod/v4";
  * Provides methods for adding services, authentication, routing, and request handling.
  */
 export class Blazy extends RouterObject<{
-  beforeRequest: Hooks<[]>,
-  afterRequest: Hooks<[]>,
+  beforeHandler: Hooks<[]>,
+  afterHandler: Hooks<[]>,
 
 }, {}> {
   /**
    * Creates a new instance of Blazy.
    * Initializes with a cache service.
    */
-  constructor() {
+  constructor(routerHooks?, routes?, routeFinder?) {
     // const cache = new Cache();
     super(
-
-      {
-        beforeRequest: Hooks.empty(),
-        afterRequest: Hooks.empty(),
+      routerHooks ?? {
+        beforeHandler: Hooks.empty(),
+        afterHandler: Hooks.empty(),
       },
-      {
-      },
-      treeRouteFinder
+      routes ?? {},
+      routeFinder ?? treeRouteFinder
     );
     // this.addService("name", cache);
+  }
+
+  /**
+   * Override addRoute to return a Blazy instance instead of RouterObject
+   * and to structure routes with "/" prefix for tree-based routing
+   */
+  addRoute(v: Parameters<RouterObject<any, any>['addRoute']>[0]): this {
+    const routeString = v.routeMatcher.getRouteString();
+    const segments = routeString.split("/").filter(s => s !== "");
+    const newRoutes = { ...this.routes };
+    let current: any = newRoutes;
+
+    // Navigate/create nested structure
+    for (let i = 0; i < segments.length; i++) {
+      const segment = segments[i];
+      if (!current[segment]) {
+        current[segment] = {};
+      }
+      current = current[segment];
+    }
+
+    // Place handler at "/" key
+    const modifiedHandler: any = {
+      ...v.handler,
+      handleRequest: arg => {
+        try {
+          return v.handler.handleRequest(arg);
+        } catch (e) {
+          if (v.hooks?.onError) {
+            return v.hooks.onError(e);
+          }
+          throw e;
+        }
+      }
+    };
+
+    current["/"] = modifiedHandler;
+
+    return new Blazy(this.routerHooks, newRoutes, this.routeFinder) as any;
   }
 
   /**
@@ -170,21 +207,36 @@ export class Blazy extends RouterObject<{
   private http<
     TPath extends string,
     Thandler extends (arg: Args extends null ? URecord : Args
-    ) => unknown, Args extends URecord | null = null>(v: {
+    ) => unknown, Args extends z.ZodObject | null = null>(v: {
       path: TPath,
       handler: Thandler,
       args?: Args
     }): Blazy {
-    this.addRoute({
-      routeMatcher: new DSLRouting(v.path),
-      handler: new NormalRouteHandler(v.handler)
-    })
 
-    return this
+    return this.addRoute({
+      routeMatcher: new DSLRouting(v.path),
+      // the checking of definition of args could be done using a single normal routing handler and oing the check inside but this would hurt performace a bit and yeah we are missing the forst for the trees given the awful performace of the framework but its so easy to do it here 
+      handler: (v.args)
+        ? new NormalRouteHandler(arg => {
+
+          const res = v.args.safeParse(arg)
+
+          if (res.success) {
+            return v.handler(res.data)
+          }
+
+          return res.error
+
+        })
+        : new NormalRouteHandler(v.handler)
+
+    })
   }
 
 
-  notFound() { } // can be stacked and overwritten to
+  notFound() { 
+
+  } // can be stacked and overwritten to
 
   post<
     THandler extends (arg: (TArgs extends undefined ? URecord : z.infer<TArgs>) & ExtractParams<TPath>) => unknown,
@@ -194,10 +246,14 @@ export class Blazy extends RouterObject<{
 
     return this.http({
       path: config.path ?? "/",
-      handler: v =>
-        v.verb === "POST"
-          ? config.handeler(v)
-          : this.notFound()
+      handler:    v =>
+      {
+        console.log("ddd",v)
+        console.log("h",v.body.verb)
+        if(v.body.verb?.indexOf("POST") > -1 && v.body.verb.length === 4 )
+          return config.handeler(v)
+          return this.notFound()
+      }
     })
 
   }
