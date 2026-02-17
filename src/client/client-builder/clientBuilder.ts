@@ -22,7 +22,7 @@ export const CleintBuilderConstructors = {
     );
   },
 
-  fromRouteTree(router: RouteTree) {
+  fromRouteTree<T extends RouteTree>(router: T) {
     return new ClientBuilder(
       {
         afterReceive: Hooks.empty(),
