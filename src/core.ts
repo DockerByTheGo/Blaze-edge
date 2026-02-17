@@ -1,5 +1,5 @@
 import { RouterObject } from "@blazyts/backend-lib";
-import type { pathStringToObject, RouterHooks, RouteTree } from "@blazyts/backend-lib/src/core/server/router/types";
+import type { PathStringToObject, RouterHooks, type RouteTree } from "@blazyts/backend-lib/src/core/server/router/types";
 import type { And, IFunc, TypeSafeOmit, URecord, } from "@blazyts/better-standard-library";
 import { BasicValidator, ifNotNone, map, NormalFunc, objectEntries, Optionable, Try } from "@blazyts/better-standard-library";
 import { FunctionRouteHandler } from "./route-handlers/variations/function/FunctionRouteHandler";
@@ -245,11 +245,11 @@ export class Blazy<
       args?: Args
     }): Blazy<
       TRouterTree &
-      pathStringToObject<
+      PathStringToObject<
         TPath,
         NormalRouteHandler<
           Parameters<Thandler>[0],
-          ReturnType<Thandler>
+           ReturnType<Thandler>
         >
       >,
       THooks
