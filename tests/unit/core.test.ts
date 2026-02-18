@@ -23,8 +23,3 @@ test("create client returns a correctly typed client", () => {
 
     expectTypeOf<typeof client>().toMatchTypeOf<Expected>();
 });
-
-
-function jiji<THandler extends (arg: string) => URecord>(config: { name: string, conf: THandler }) { }
-
-jiji({ name: "", conf: tap(ctx => { return {} }) });

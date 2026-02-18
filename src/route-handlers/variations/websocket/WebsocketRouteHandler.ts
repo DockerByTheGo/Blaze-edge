@@ -1,5 +1,7 @@
-import type { URecord } from "@blazyts/better-standard-library";
+import type { KeyOfOnlyStringKeys, URecord } from "@blazyts/better-standard-library";
 import type { IRouteHandler } from "@blazyts/backend-lib/src/core/server/router/routeHandler";
+import z from "zod/v4";
+import { password, type WebSocket } from "bun";
 
 export type WebSocketMessage = {
     type: string;
@@ -26,21 +28,39 @@ export type WebSocketContext = {
     sendTo: (connectionId: string, message: WebSocketResponse) => void;
 };
 
+export class Message<TSchema extends z.ZodObject> {
+
+    constructor(
+        public readonly schema: TSchema,
+        public readonly handler: (ctx: { data: z.infer<TSchema>, ws: WebSocket }) => void
+    ) { }
+}
+
+export type Schema = {
+    messagesItCanSend: Record<string, Message<z.ZodObject>>,
+    messagesItCanRecieve: Record<string, Message<z.ZodObject>>
+}
+
+
+
+export type WeboscketRouteCleintRepresentation<TServerMessagesSchema extends Schema> = {
+    handle: {
+        [Message in KeyOfOnlyStringKeys<TServerMessagesSchema["messagesItCanSend"]>]: (func: TServerMessagesSchema["messagesItCanSend"][Message]["handler"]) => void
+    },
+    send: {
+        [Message in KeyOfOnlyStringKeys<TServerMessagesSchema["messagesItCanRecieve"]>]: (Parameters<TServerMessagesSchema["messagesItCanRecieve"][Message]["handler"]>[0])["data"]
+    }
+}
+
 export class WebsocketRouteHandler<
-    TMessage extends WebSocketMessage = WebSocketMessage,
-    TResponse extends WebSocketResponse = WebSocketResponse,
-> implements IRouteHandler<TMessage, TResponse> {
+    TMessagesSchema extends Schema,
+> implements IRouteHandler<TMessagesSchema, any> {
 
     private connections = new Map<string, WebSocketConnection>();
     private heartbeatInterval?: Timer;
 
     constructor(
-        private handlers: {
-            onConnect?: (connection: WebSocketConnection, context: WebSocketContext) => void;
-            onMessage?: (message: TMessage, connection: WebSocketConnection, context: WebSocketContext) => TResponse | void;
-            onDisconnect?: (connection: WebSocketConnection, context: WebSocketContext) => void;
-            onError?: (error: Error, connection: WebSocketConnection, context: WebSocketContext) => void;
-        }
+        public readonly schema: TMessagesSchema
     ) {
         this.startHeartbeat();
     }
@@ -188,7 +208,7 @@ export class WebsocketRouteHandler<
         return connection;
     }
 
-    getClientRepresentation() {
+    getClientRepresentation: (metadata) => (ctx) => WeboscketRouteCleintRepresentation<TMessagesSchema> = (metadata) => {
         return {
             type: "websocket",
             protocol: "ws",
@@ -228,3 +248,21 @@ export class WebsocketRouteHandler<
         this.connections.clear();
     }
 }
+
+// for example we have a logins channel where each time a new user enters we check his creds to join the actual user into the game and then send back a re2 to all connected players that a new player has joined
+const cl = new WebsocketRouteHandler({
+    messagesItCanRecieve: {
+        new: new Message(z.object({ name: z.string(), password: z.string() }), v => {
+            function save(v: any) {
+
+            }
+
+            save(v.data)
+        })
+    },
+    messagesItCanSend: {
+        joined: new Message(z.object({ name: z.string() }), v => v.data)
+    }
+}).getClientRepresentation({})({})
+cl.handle.joined(v => v.data)
+cl.send.new({data: {name: ""}})

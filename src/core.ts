@@ -1,9 +1,8 @@
 import { RouterObject } from "@blazyts/backend-lib";
 import type { PathStringToObject, RouterHooks, type RouteTree } from "@blazyts/backend-lib/src/core/server/router/types";
-import type { And, IFunc, TypeSafeOmit, URecord, } from "@blazyts/better-standard-library";
+import type { And, IFunc, KeyOfOnlyStringKeys, TypeSafeOmit, URecord, } from "@blazyts/better-standard-library";
 import { BasicValidator, ifNotNone, map, NormalFunc, objectEntries, Optionable, Try } from "@blazyts/better-standard-library";
 import { FunctionRouteHandler } from "./route-handlers/variations/function/FunctionRouteHandler";
-import type { Schema } from "@blazyts/better-standard-library/src/others/validator/schema";
 import { Path } from "@blazyts/backend-lib/src/core/server/router/utils/path/Path";
 import { FileRouteHandler, NormalRouteHandler } from "./route-handlers/variations";
 import { DSLRouting } from "./route-matchers/dsl/main";
@@ -16,6 +15,7 @@ import { CleintBuilderConstructors, ClientBuilder } from "./client/client-builde
 import { RequestObjectHelper } from "@blazyts/backend-lib/src/core/utils/RequestObjectHelper";
 import type { IRouteHandler, RouteFinder } from "@blazyts/backend-lib/src/core/server";
 import type { ClientObject } from "./client/Client";
+import type { Message, Schema } from "./route-handlers/variations/websocket/WebsocketRouteHandler";
 
 type EmptyHooks = ReturnType<typeof Hooks.empty>
 
@@ -326,7 +326,7 @@ export class Blazy<
       handler: v => {
         console.log("verb", v)
         if (v.verb?.indexOf("POST") > -1 && v.verb.length === 4)
-        return config.handeler(v)
+          return config.handeler(v)
         return this.notFound()
       },
       meta: { verb: "POST" }
@@ -426,7 +426,13 @@ export class Blazy<
 
   }
 
-  websocket() { }
+  websocket<
+    TPath extends string,
+    TMessages extends Schema
+  >(v: {
+    path: TPath,
+    messages: TMessages
+  }) { }
 
   websocketFromObject() { }
 
