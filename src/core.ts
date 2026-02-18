@@ -16,6 +16,7 @@ import { RequestObjectHelper } from "@blazyts/backend-lib/src/core/utils/Request
 import type { IRouteHandler, RouteFinder } from "@blazyts/backend-lib/src/core/server";
 import type { ClientObject } from "./client/Client";
 import type { Message, Schema } from "./route-handlers/variations/websocket/WebsocketRouteHandler";
+import { WebsocketRouteHandler } from "./route-handlers/variations/websocket/WebsocketRouteHandler";
 
 type EmptyHooks = ReturnType<typeof Hooks.empty>
 
@@ -432,7 +433,19 @@ export class Blazy<
   >(v: {
     path: TPath,
     messages: TMessages
-  }) { }
+  }): Blazy<
+    TRouterTree &
+    PathStringToObject<
+      TPath,
+      WebsocketRouteHandler<TMessages>
+    >,
+    THooks
+  > {
+    return this.addRoute({
+      routeMatcher: new NormalRouting(v.path),
+      handler: new WebsocketRouteHandler(v.messages)
+    });
+  }
 
   websocketFromObject() { }
 
@@ -444,10 +457,42 @@ export class Blazy<
   }
 
   listen(port: number = 3000) {
+    const wsHandlers = new Map<string, WebsocketRouteHandler<any>>();
+
+    // Collect all websocket handlers from routes
+    const collectWSHandlers = (routes: any, path: string = "") => {
+      for (const [key, value] of Object.entries(routes)) {
+        const currentPath = path + "/" + key;
+        if (value instanceof WebsocketRouteHandler) {
+          wsHandlers.set(currentPath, value);
+        } else if (typeof value === "object" && value !== null && !("/" in value)) {
+          collectWSHandlers(value, currentPath);
+        }
+      }
+    };
+
+    collectWSHandlers(this.routes);
+
     const server = Bun.serve({
       port,
       fetch: async (req: Request) => {
         try {
+          const url = new URL(req.url);
+          const pathname = url.pathname;
+
+          // Check for WebSocket upgrade
+          if (req.headers.get("upgrade") === "websocket") {
+            const handler = wsHandlers.get(pathname);
+            if (handler && req.headers.get("connection")?.toLowerCase().includes("upgrade")) {
+              const upgraded = server.upgrade(req);
+              if (upgraded) {
+                handler.handleConnection(upgraded, req);
+                return undefined;
+              }
+            }
+          }
+
+          // Handle regular HTTP requests
           const headers: Record<string, string> = {};
           req.headers.forEach((v, k) => (headers[k] = v));
 
@@ -458,8 +503,6 @@ export class Blazy<
           } else {
             try { const text = await req.text(); if (text) body = { text }; } catch { body = {} }
           }
-
-
 
           const res = this.route({ url: req.url, body, verb: req.method });
           console.log("gg", res)

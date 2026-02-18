@@ -55,10 +55,16 @@ export type WeboscketRouteCleintRepresentation<TServerMessagesSchema extends Sch
 
 export class WebsocketRouteHandler<
     TMessagesSchema extends Schema,
-> implements IRouteHandler<TMessagesSchema, any> {
+> implements IRouteHandler<WebSocketMessage, WebSocketResponse> {
 
     private connections = new Map<string, WebSocketConnection>();
     private heartbeatInterval?: Timer;
+    private handlers: {
+        onConnect?: (conn: WebSocketConnection, ctx: WebSocketContext) => void;
+        onMessage?: (msg: WebSocketMessage, conn: WebSocketConnection, ctx: WebSocketContext) => void;
+        onDisconnect?: (conn: WebSocketConnection, ctx: WebSocketContext) => void;
+        onError?: (error: Error, conn: WebSocketConnection, ctx: WebSocketContext) => void;
+    } = {};
 
     constructor(
         public readonly schema: TMessagesSchema
@@ -66,7 +72,7 @@ export class WebsocketRouteHandler<
         this.startHeartbeat();
     }
 
-    handleRequest(message: TMessage): TResponse {
+    handleRequest(message: WebSocketMessage): WebSocketResponse {
         const connection = this.connections.get(message.connectionId);
         if (!connection) {
             throw new Error(`Connection ${message.connectionId} not found`);
@@ -89,18 +95,27 @@ export class WebsocketRouteHandler<
             }
         };
 
-        if (this.handlers.onMessage) {
-            const response = this.handlers.onMessage(message, connection, context);
-            if (response) {
-                return response;
+        const messageHandler = this.schema.messagesItCanRecieve[message.type];
+        if (messageHandler) {
+            try {
+                const parsed = messageHandler.schema.parse(message.data);
+                messageHandler.handler({ data: parsed, ws: undefined as any });
+            } catch (error) {
+                if (this.handlers.onError) {
+                    this.handlers.onError(error as Error, connection, context);
+                }
             }
+        }
+
+        if (this.handlers.onMessage) {
+            this.handlers.onMessage(message, connection, context);
         }
 
         // Default response if no handler provided
         return {
             type: "ack",
             data: { received: message.type }
-        } as TResponse;
+        };
     }
 
     // WebSocket lifecycle methods
@@ -148,16 +163,13 @@ export class WebsocketRouteHandler<
 
         ws.onmessage = (event) => {
             try {
-                const message: TMessage = {
+                const message: WebSocketMessage = {
                     ...JSON.parse(event.data as string),
                     connectionId
-                } as TMessage;
+                };
 
                 if (this.handlers.onMessage) {
-                    const response = this.handlers.onMessage(message, connection, context);
-                    if (response) {
-                        connection.send(response);
-                    }
+                    this.handlers.onMessage(message, connection, context);
                 }
             } catch (error) {
                 if (this.handlers.onError) {
@@ -209,15 +221,99 @@ export class WebsocketRouteHandler<
         return connection;
     }
 
-    getClientRepresentation: (metadata) => (ctx) => WeboscketRouteCleintRepresentation<TMessagesSchema> = (metadata) => {
-        return {
-            type: "websocket",
-            protocol: "ws",
-            supports: {
-                heartbeat: true,
-                reconnection: true,
-                messageTypes: ["connect", "message", "disconnect", "error"]
-            }
+    getClientRepresentation = (metadata: any): ((url: string) => WeboscketRouteCleintRepresentation<TMessagesSchema>) => {
+        return (url: string) => {
+            const wsUrl = url.replace(/^http/, "ws");
+
+            let ws: WebSocket | null = null;
+            let connected = false;
+            const messageHandlers = new Map<string, Function>();
+            const pendingMessages: WebSocketResponse[] = [];
+
+            const ensureConnection = (): Promise<void> => {
+                return new Promise((resolve, reject) => {
+                    if (connected && ws) {
+                        resolve();
+                        return;
+                    }
+
+                    try {
+                        ws = new WebSocket(wsUrl);
+
+                        ws.onopen = () => {
+                            connected = true;
+                            // Send any pending messages
+                            while (pendingMessages.length > 0) {
+                                const msg = pendingMessages.shift();
+                                if (msg && ws) {
+                                    ws.send(JSON.stringify(msg));
+                                }
+                            }
+                            resolve();
+                        };
+
+                        ws.onerror = () => {
+                            connected = false;
+                            reject(new Error("WebSocket connection failed"));
+                        };
+
+                        ws.onmessage = (event) => {
+                            try {
+                                const message = JSON.parse(event.data as string);
+                                const handler = messageHandlers.get(message.type);
+                                if (handler) {
+                                    handler(message.data);
+                                }
+                            } catch (error) {
+                                console.error("Failed to parse WebSocket message", error);
+                            }
+                        };
+
+                        ws.onclose = () => {
+                            connected = false;
+                        };
+                    } catch (error) {
+                        reject(error);
+                    }
+                });
+            };
+
+            return {
+                handle: new Proxy({}, {
+                    get: (target, messageType: string) => (callback: Function) => {
+                        messageHandlers.set(messageType as string, callback);
+                    }
+                }) as any,
+                send: new Proxy({}, {
+                    get: (target, messageType: string) => async (data: any) => {
+                        const handler = this.schema.messagesItCanRecieve[messageType as string];
+                        if (!handler) {
+                            throw new Error(`Message type "${messageType}" not found in schema`);
+                        }
+
+                        try {
+                            handler.schema.parse(data);
+                            await ensureConnection();
+
+                            const message: WebSocketMessage = {
+                                type: messageType as string,
+                                data,
+                                connectionId: ""
+                            };
+
+                            if (ws && connected) {
+                                ws.send(JSON.stringify(message));
+                            } else {
+                                pendingMessages.push(message as any);
+                            }
+                            return true;
+                        } catch (error) {
+                            console.error(`Validation failed for message "${messageType}"`, error);
+                            return false;
+                        }
+                    }
+                }) as any
+            };
         };
     }
 
@@ -250,20 +346,16 @@ export class WebsocketRouteHandler<
     }
 }
 
-// for example we have a logins channel where each time a new user enters we check his creds to join the actual user into the game and then send back a re2 to all connected players that a new player has joined
-const cl = new WebsocketRouteHandler({
+// Example usage
+const handler = new WebsocketRouteHandler({
     messagesItCanRecieve: {
         new: new Message(z.object({ name: z.string(), password: z.string() }), v => {
-            function save(v: any) {
-
-            }
-
-            save(v.data)
+            console.log("User login attempt:", v.data);
         })
     },
     messagesItCanSend: {
         joined: new Message(z.object({ name: z.string() }), v => v.data)
     }
-}).getClientRepresentation({})({})
-cl.handle.joined(v => v.data)
-cl.send.new({name: "", password: ""})
+});
+
+// Client usage
