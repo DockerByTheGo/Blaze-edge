@@ -9,7 +9,7 @@ export type Routes<R extends RouteTree> = {
 
 export type ClientObject<T extends RouteTree> = {
     [CurrentRoute in KeyOfOnlyStringKeys<T>]: T[CurrentRoute] extends IRouteHandler<any, any>
-    ? T[CurrentRoute]["getClientRepresentation"]
+    ? ReturnType<T[CurrentRoute]["getClientRepresentation"]>
     : ClientObject<T[CurrentRoute]>
 }
 
@@ -29,23 +29,26 @@ export class Client<TRouteTree extends RouteTree> {
 
     public readonly routes: ClientObject<TRouteTree>
 
-    public constructor(public readonly routeTree: TRouteTree) {
-
-        this.routes = {
-            send<Route extends keyof TRouteTree>(route: Route): TRouteTree[Route] extends IRouteHandler<any, any>
-                ? TRouteTree[Route]["getClientRepresentation"]
-                : "" {
-                // In a real client, this method would construct and send an HTTP request
-                // based on the `TRouteTree[Route]["getLCientRepresentation"]` definition
-                // and return a Promise of the response.
-                // For this example, we just return the client representation definition itself.
-                // A more complete implementation would involve a network call.
-                return
-
+    public constructor(public readonly routeTree: TRouteTree, public readonly url: string) {
+        const build = (tree: any, path: string = "") => {
+            const out: any = {};
+            for (const key of Object.keys(tree ?? {})) {
+                const currentPath = path ? `${path}/${key}` : `/${key}`;
+                const node = tree[key] as IRouteHandler<any, any>;
+                if (node && typeof node.getClientRepresentation === "function") {
+                    out[key] = node.getClientRepresentation({
+                        url: this.url + node.metadata.subRoute,
+                        path: currentPath,
+                        ...node.metadata
+                    });
+                } else {
+                    out[key] = build(node ?? {}, currentPath);
+                }
             }
+            return out;
+        };
 
-        }
-
+        this.routes = build(this.routeTree) as unknown as ClientObject<TRouteTree>;
     }
 
     batch(v: Routes<RouteTree>) {

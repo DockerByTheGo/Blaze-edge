@@ -8,7 +8,7 @@ import { Path } from "@blazyts/backend-lib/src/core/server/router/utils/path/Pat
 import { FileRouteHandler, NormalRouteHandler } from "./route-handlers/variations";
 import { DSLRouting } from "./route-matchers/dsl/main";
 import { NormalRouting, } from "./route-matchers/normal";
-import { Hooks, type Hook, type HooksDefault } from "@blazyts/backend-lib/src/core/types/Hooks/Hooks";
+import { Hook, Hooks, type HooksDefault } from "@blazyts/backend-lib/src/core/types/Hooks/Hooks";
 import type { ExtractParams } from "./route-matchers/dsl/types/extractParams";
 import { treeRouteFinder } from "./route-finders";
 import z from "zod/v4";
@@ -35,7 +35,11 @@ export class Blazy<
 
 }, TRouterTree> {
   static create(): Blazy<{}, {}> {
-    return new Blazy({}, {} as any, undefined as any);
+    return new Blazy({
+      beforeHandler: Hooks.empty(),
+      afterHandler: Hooks.empty()
+
+    }, {} as any, undefined as any);
   }
   /**
    * Creates a new instance of Blazy.
@@ -62,7 +66,11 @@ export class Blazy<
     TPath extends string,
     THandler extends IRouteHandler<any, any>,
     TLocalHooks extends Record<string, any> | undefined = undefined
-  >(v: { routeMatcher: { getRouteString(): TPath }, handler: THandler, hooks?: TLocalHooks }): Blazy<
+  >(v: {
+    routeMatcher: { getRouteString(): TPath },
+    handler: THandler,
+    hooks?: TLocalHooks
+  }): Blazy<
     TRouterTree &
     PathStringToObject<
       TPath,
@@ -87,6 +95,7 @@ export class Blazy<
     // Place handler at "/" key
     const modifiedHandler: any = {
       ...v.handler,
+      getClientRepresentation: v.handler.getClientRepresentation,
       handleRequest: arg => {
         try {
           return v.handler.handleRequest(arg);
@@ -262,22 +271,24 @@ export class Blazy<
   http<
     TPath extends string,
     Thandler extends (arg: Args extends null ? URecord : Args
-    ) => unknown, Args extends z.ZodObject | null = null>(v: {
-      path: TPath,
-      handler: Thandler,
-      args?: Args
-    }): Blazy<
-      TRouterTree &
-      PathStringToObject<
-        TPath,
-        NormalRouteHandler<
-          Parameters<Thandler>[0],
-          ReturnType<Thandler>
-        >
-      >,
-      THooks
-    > {
-
+    ) => unknown,
+    Args extends z.ZodObject | null = null
+  >(v: {
+    path: TPath,
+    handler: Thandler,
+    args?: Args
+  }): Blazy<
+    TRouterTree &
+    PathStringToObject<
+      TPath,
+      NormalRouteHandler<
+        Parameters<Thandler>[0],
+        ReturnType<Thandler>
+      >
+    >,
+    THooks
+  > {
+    const metadata = { subRoute: v.path }
     return this.addRoute({
       routeMatcher: new DSLRouting(v.path),
       // the checking of definition of args could be done using a single normal routing handler and oing the check inside but this would hurt performace a bit and yeah we are missing the forst for the trees given the awful performace of the framework but its so easy to do it here 
@@ -292,9 +303,8 @@ export class Blazy<
 
           return res.error
 
-        })
-        : new NormalRouteHandler(v.handler)
-
+        }, metadata)
+        : new NormalRouteHandler(v.handler, metadata)
     })
   }
 
@@ -311,11 +321,9 @@ export class Blazy<
     TPath extends string,
   >(config: { path: TPath, handeler: THandler, args?: TArgs }) {
 
-    return this.http({
+    return this.http<TPath, THandler>({
       path: config.path,
       handler: v => {
-        console.log("ddd", v)
-        console.log("h", v.body.verb)
         if (v.body.verb?.indexOf("POST") > -1 && v.body.verb.length === 4)
           return config.handeler(v)
         return this.notFound()
@@ -416,14 +424,15 @@ export class Blazy<
 
   }
 
-  websocket(){}
+  websocket() { }
 
-  websocketFromObject(){}
+  websocketFromObject() { }
 
 
   brpcRoutify() { }
 
   createClient(): ClientBuilder<TRouterTree, { beforeSend: HooksDefault, afterReceive: HooksDefault, onErrored: HooksDefault }> {
+    console.log("kfkfkkfkfkfkfkfk", this.routes)
     return CleintBuilderConstructors.fromRouteTree(this.routes)
   }
 
@@ -436,7 +445,7 @@ export class Blazy<
     // to the router. Transform the incoming Request into a RequestObjectHelper
     // that the router understands.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    Bun.serve({
+    const server = Bun.serve({
       port,
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore - Bun's `fetch` signature is compatible with this handler at runtime
@@ -472,6 +481,8 @@ export class Blazy<
         }
       },
     });
+
+    return server;
   }
 
   applySubRouter<T extends Blazy>(v: Blazy) {

@@ -3,7 +3,7 @@ import type { ifAny } from "@blazyts/better-standard-library";
 import type { ClientHooks } from "../types/ClientHooks";
 import type { Config } from "../types/Config";
 
-import { Client,type ClientObject } from "../Client";
+import { Client, type ClientObject } from "../Client";
 import { Hooks, type RouteTree } from "@blazyts/backend-lib";
 
 export const CleintBuilderConstructors = {
@@ -100,11 +100,11 @@ export class ClientBuilder<
     );
   }
 
-  createClient(): ClientObject<TRouter> {
-    return new Client(
-      this.hooks,
-      this.config,
+  createClient(): (url: string) => Client<TRouter> {
+    console.log("fhfhfhhf", this.router)
+    return (url: string) => new Client(
       this.router,
+      url
     );
   }
 }
