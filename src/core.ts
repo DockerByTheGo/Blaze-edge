@@ -436,10 +436,6 @@ export class Blazy<
     return CleintBuilderConstructors.fromRouteTree(this.routes)
   }
 
-  client(): ClientObject<TRouterTree> {
-    return new lll
-  }
-
   listen(port: number = 3000) {
     // Use Bun's built-in server to accept connections and forward requests
     // to the router. Transform the incoming Request into a RequestObjectHelper
@@ -462,16 +458,9 @@ export class Blazy<
             try { const text = await req.text(); if (text) body = { text }; } catch { body = {} }
           }
 
-          const url = new URL(req.url);
-          const path = url.pathname;
 
-          const requestHelper = new RequestObjectHelper<any, Record<string, string>, string>({
-            body,
-            headers,
-            path,
-          });
 
-          const res = this.route(requestHelper);
+          const res = this.route({ url: new Path(req.url), body: await req.json() });
 
           // If router returned a native Response, forward it. Otherwise try to coerce.
           if (res instanceof Response) return res;
