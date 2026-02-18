@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { Client } from "../src/client/Client";
+import { Client } from "../../src/client/Client";
 import type { RouteTree } from "@blazyts/backend-lib";
-import { SimpleRouteHandler } from "./mocks/RouteHandlers";
+import { SimpleRouteHandler } from "../mocks/RouteHandlers";
 
 describe("Client", () => {
     it("constructs with routes and has send function", () => {

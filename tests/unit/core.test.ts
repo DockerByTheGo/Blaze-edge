@@ -1,8 +1,8 @@
 import type { URecord } from "@blazyts/better-standard-library";
-import { Blazy } from "../src/core";
-import { tap } from "../src/hooks";
+import { Blazy } from "../../src/core";
+import { tap } from "../../src/hooks";
 import z from "zod/v4";
-import type { ClientObject } from "../src/client/Client";
+import type { ClientObject } from "../../src/client/Client";
 import { expectTypeOf, test } from "bun:test";
 
 test("create client returns a correctly typed client", () => {
