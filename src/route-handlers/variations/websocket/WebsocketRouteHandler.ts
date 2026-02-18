@@ -45,10 +45,11 @@ export type Schema = {
 
 export type WeboscketRouteCleintRepresentation<TServerMessagesSchema extends Schema> = {
     handle: {
-        [Message in KeyOfOnlyStringKeys<TServerMessagesSchema["messagesItCanSend"]>]: (func: TServerMessagesSchema["messagesItCanSend"][Message]["handler"]) => void
+        [Message in KeyOfOnlyStringKeys<TServerMessagesSchema["messagesItCanSend"]>]: (callback: TServerMessagesSchema["messagesItCanSend"][Message]["handler"]) => void
     },
     send: {
-        [Message in KeyOfOnlyStringKeys<TServerMessagesSchema["messagesItCanRecieve"]>]: (Parameters<TServerMessagesSchema["messagesItCanRecieve"][Message]["handler"]>[0])["data"]
+        [Message in KeyOfOnlyStringKeys<TServerMessagesSchema["messagesItCanRecieve"]>]: (
+            data: (Parameters<TServerMessagesSchema["messagesItCanRecieve"][Message]["handler"]>[0])["data"]) => void
     }
 }
 
@@ -265,4 +266,4 @@ const cl = new WebsocketRouteHandler({
     }
 }).getClientRepresentation({})({})
 cl.handle.joined(v => v.data)
-cl.send.new({data: {name: ""}})
+cl.send.new({name: "", password: ""})
