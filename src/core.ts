@@ -324,8 +324,9 @@ export class Blazy<
     return this.http<TPath, THandler>({
       path: config.path,
       handler: v => {
-        if (v.body.verb?.indexOf("POST") > -1 && v.body.verb.length === 4)
-          return config.handeler(v)
+        console.log("verb", v)
+        if (v.verb?.indexOf("POST") > -1 && v.verb.length === 4)
+        return config.handeler(v)
         return this.notFound()
       },
       meta: { verb: "POST" }
@@ -437,14 +438,8 @@ export class Blazy<
   }
 
   listen(port: number = 3000) {
-    // Use Bun's built-in server to accept connections and forward requests
-    // to the router. Transform the incoming Request into a RequestObjectHelper
-    // that the router understands.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const server = Bun.serve({
       port,
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore - Bun's `fetch` signature is compatible with this handler at runtime
       fetch: async (req: Request) => {
         try {
           const headers: Record<string, string> = {};
@@ -460,12 +455,14 @@ export class Blazy<
 
 
 
-          const res = this.route({ url: new Path(req.url), body: await req.json() });
+          const res = this.route({ url: req.url, body, verb: req.method });
+          console.log("gg", res)
 
           // If router returned a native Response, forward it. Otherwise try to coerce.
           if (res instanceof Response) return res;
           return new Response(JSON.stringify(res), { headers: { "content-type": "application/json" } });
         } catch (e) {
+          console.log(e)
           return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { "content-type": "application/json" } });
         }
       },

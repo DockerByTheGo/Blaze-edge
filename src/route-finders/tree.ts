@@ -37,7 +37,6 @@ const isRouteHandler = (value: any): value is IRouteHandler<Request, any> => {
  */
 export const treeRouteFinder: RouteFinder<RouteTree> = (routesTree, path) => {
     const pathParts = path.parts.map(part => part.part);
-
     /**
      * Recursively traverse the route tree
      * @param currentNode - Current node in the route tree

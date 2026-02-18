@@ -10,7 +10,9 @@ export const app = Blazy
     // })
     .post({
         path: "/jiji/koko",
-        handeler: v => "fff",
+        handeler: v => {
+            return "fr"
+        },
         args: z.object({ koko: z.string() })
     })
     // .post({

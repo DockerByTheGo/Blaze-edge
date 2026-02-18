@@ -33,16 +33,16 @@ export class NormalRouteHandler<
 
   }
 
-  getClientRepresentation: (meta: URecord) => (v: TCtx) => Promise<{json(): Promise<TReturn>}> = (meta: URecord) => async (v: TCtx) => {
+  getClientRepresentation: (meta: URecord) => (v: TCtx) => Promise<{ json(): Promise<TReturn> }> = (meta: URecord) => async (v: TCtx) => {
     const metadata: IRouteHandlerMetadata = {
       ...this.metadata,
       ...meta
     }
 
-    console.log("ufl", metadata.url)
+
     return await fetch(metadata.url, {
-      method: metadata.method,
-      body: JSON.stringify(v.body)
+      method: metadata.verb,
+      body: JSON.stringify(v)
     })
   }
 }
