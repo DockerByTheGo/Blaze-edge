@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { HooksCombiner } from "../../src/utils/combine-hooks/HooksCombiner";
 import type { Hook } from "@blazyts/backend-lib/src/core/types/Hooks/Hooks";
+import { HooksCombiner } from "../../../src/utils/combine-hooks";
 
 describe("HooksCombiner", () => {
     describe("static new", () => {

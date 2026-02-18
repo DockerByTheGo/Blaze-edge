@@ -1,6 +1,8 @@
+import type { IRouteHandler } from "@blazyts/backend-lib";
+import type { IRouteHandlerMetadata } from "@blazyts/backend-lib/src/core/server";
 import type { URecord } from "@blazyts/better-standard-library";
+import { fetch } from "bun";
 
-import type { IRouteHandler } from "../types";
 
 
 
@@ -16,6 +18,7 @@ function withStaticNew<T extends new (...args: any[]) => any>(Class: T) {
 }
 
 
+
 export class NormalRouteHandler<
   TCtx extends { body: URecord },
   TReturn extends { body: URecord },
@@ -25,14 +28,23 @@ export class NormalRouteHandler<
 > {
   constructor(
     public handleRequest: (arg: TCtx) => TReturn,
+    public metadata: { subRoute: string, method: "POST" }
   ) {
 
   }
 
-  getClientRepresentation = () => ({
-    method: "POST",
-    path: "/api/route",
-  });
+  getClientRepresentation: (meta: URecord) => (v: TCtx) => Promise<{ json(): Promise<TReturn> }> = (meta: URecord) => async (v: TCtx) => {
+    const metadata: IRouteHandlerMetadata = {
+      ...this.metadata,
+      ...meta
+    }
+
+
+    return await fetch(metadata.url, {
+      method: metadata.verb,
+      body: JSON.stringify(v)
+    })
+  }
 }
 
 

@@ -1,5 +1,5 @@
 import { describe, expect } from "bun:test";
-import { DSLRouting } from "../../../src/route-matchers/dsl/main";
+import { DSLRouting } from "../../../../src/route-matchers/dsl/main";
 
 describe("should match", () => {
     const r = new DSLRouting("/posts/:id$/")
