@@ -1,17 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { Client } from "../src/client/Client";
-
-class FakeHandler {
-    getClientRepresentation = () => ({ foo: "bar" });
-    handleRequest() { }
-}
+import type { RouteTree } from "@blazyts/backend-lib";
+import { SimpleRouteHandler } from "./mocks/RouteHandlers";
 
 describe("Client", () => {
     it("constructs with routes and has send function", () => {
-        const routeTree = { jiji: { "/": new FakeHandler() } } as ;
+        const routeTree = { jiji: { "/": new SimpleRouteHandler() } } as const;
         const client = new Client(routeTree);
-        
-        expect(client).toBeInstanceOf(Client);
+            client.routes.jiji["/"]
+        expect(client).toBeInstanceOf(Client);  
         expect(client.routes).toBeDefined();
         expect(typeof (client as any).routes.send).toBe("function");
     });

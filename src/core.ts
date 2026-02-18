@@ -8,11 +8,11 @@ import { Path } from "@blazyts/backend-lib/src/core/server/router/utils/path/Pat
 import { FileRouteHandler, NormalRouteHandler } from "./route-handlers/variations";
 import { DSLRouting } from "./route-matchers/dsl/main";
 import { NormalRouting, } from "./route-matchers/normal";
-import { Hooks, type Hook } from "@blazyts/backend-lib/src/core/types/Hooks/Hooks";
+import { Hooks, type Hook, type HooksDefault } from "@blazyts/backend-lib/src/core/types/Hooks/Hooks";
 import type { ExtractParams } from "./route-matchers/dsl/types/extractParams";
 import { treeRouteFinder } from "./route-finders";
 import z from "zod/v4";
-import { CleintBuilderConstructors } from "./client/client-builder/clientBuilder";
+import { CleintBuilderConstructors, ClientBuilder } from "./client/client-builder/clientBuilder";
 import type { IRouteHandler, RouteFinder } from "@blazyts/backend-lib/src/core/server";
 
 type EmptyHooks = ReturnType<typeof Hooks.empty>
@@ -414,7 +414,7 @@ export class Blazy<
 
   brpcRoutify() { }
 
-  createClient() {
+  createClient(): ClientBuilder<TRouterTree, {beforeSend: HooksDefault, afterReceive: HooksDefault, onErrored: HooksDefault}> {
     return CleintBuilderConstructors.fromRouteTree(this.routes)
   }
 

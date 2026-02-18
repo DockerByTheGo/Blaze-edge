@@ -1,11 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { CleintBuilderConstructors } from "../src/client/client-builder/clientBuilder";
 import { Client } from "../src/client/Client";
+import { SimpleRouteHandler } from "./mocks/RouteHandlers";
 
 describe("ClientBuilder", () => {
     it("fromRouteTree creates builder and createClient returns Client", () => {
-        const fakeRoute = {} as any;
-        const builder = CleintBuilderConstructors.fromRouteTree(fakeRoute);
+        const routeTree = { jiji: { "/": new SimpleRouteHandler() } } as const;
+        const builder = CleintBuilderConstructors.fromRouteTree(routeTree);
+        builder.createClient()
         const client = builder.createClient();
         expect(client).toBeInstanceOf(Client);
         expect(client.routes).toBeDefined();

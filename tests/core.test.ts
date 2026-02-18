@@ -24,7 +24,7 @@ console.log(new Blazy()
         handeler: v => v,
         args: z.object({})
     })
-    .createClient()
+    .createClient().createClient()
     
 
 

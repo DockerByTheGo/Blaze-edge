@@ -27,9 +27,9 @@ export class ClientConstructors {
 
 export class Client<TRouteTree extends RouteTree> {
 
-    public readonly routes: Routes<TRouteTree>
+    public readonly routes: ClientObject<TRouteTree>
 
-    public constructor(routes: TRouteTree) {
+    public constructor(public readonly routeTree: TRouteTree) {
 
         this.routes = {
             send<Route extends keyof TRouteTree>(route: Route): TRouteTree[Route] extends IRouteHandler<any, any>
