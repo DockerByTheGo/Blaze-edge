@@ -10,7 +10,7 @@ export const app = Blazy
     // })
     .post({
         path: "/jiji/koko",
-        handeler: v => v,
+        handeler: v => "fff",
         args: z.object({ koko: z.string() })
     })
     // .post({
@@ -21,5 +21,5 @@ export const app = Blazy
     .post({
         path: "/jiji",
         handeler: v => v,
-        args: z.object({v: z.string()})
+        args: z.object({ v: z.string() })
     })

@@ -276,7 +276,8 @@ export class Blazy<
   >(v: {
     path: TPath,
     handler: Thandler,
-    args?: Args
+    args?: Args,
+    meta?: URecord
   }): Blazy<
     TRouterTree &
     PathStringToObject<
@@ -288,13 +289,12 @@ export class Blazy<
     >,
     THooks
   > {
-    const metadata = { subRoute: v.path }
+    const metadata = { subRoute: v.path, ...v.meta }
     return this.addRoute({
       routeMatcher: new DSLRouting(v.path),
       // the checking of definition of args could be done using a single normal routing handler and oing the check inside but this would hurt performace a bit and yeah we are missing the forst for the trees given the awful performace of the framework but its so easy to do it here 
       handler: (v.args)
         ? new NormalRouteHandler(arg => {
-
           const res = v.args.safeParse(arg)
 
           if (res.success) {
@@ -304,7 +304,7 @@ export class Blazy<
           return res.error
 
         }, metadata)
-        : new NormalRouteHandler(v.handler, metadata)
+        : new NormalRouteHandler(a => v.handler(a), metadata)
     })
   }
 
@@ -327,7 +327,8 @@ export class Blazy<
         if (v.body.verb?.indexOf("POST") > -1 && v.body.verb.length === 4)
           return config.handeler(v)
         return this.notFound()
-      }
+      },
+      meta: { verb: "POST" }
     })
 
   }
@@ -432,7 +433,6 @@ export class Blazy<
   brpcRoutify() { }
 
   createClient(): ClientBuilder<TRouterTree, { beforeSend: HooksDefault, afterReceive: HooksDefault, onErrored: HooksDefault }> {
-    console.log("kfkfkkfkfkfkfkfk", this.routes)
     return CleintBuilderConstructors.fromRouteTree(this.routes)
   }
 
