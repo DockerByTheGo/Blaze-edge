@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { treeRouteFinder } from "../../src/route-finders/tree";
 import type { RouteTree } from "@blazyts/backend-lib/src/core/server/router/types";
 import type { IRouteHandler, Request, Response } from "@blazyts/backend-lib/src/core/server/router/routeHandler/types";
 import { Path } from "@blazyts/backend-lib/src/core/server/router/utils/path/Path";
+import { treeRouteFinder } from "../../../src/route-finders";
 
 describe("Tree Route Finder", () => {
     // Setup route handlers
@@ -53,7 +53,7 @@ describe("Tree Route Finder", () => {
         const handler = treeRouteFinder(exampleRoutes, path);
 
         expect(handler.isSome()).toBe(true);
-        const result = handler.unpack("Handler not found").map(h => h({ body: {} }));
+        const result = handler.unpack("Handler not found").map(h => h.handleRequest({ body: {} }));
         expect(result.v.body.message).toBe("Root handler");
     });
 
@@ -62,7 +62,7 @@ describe("Tree Route Finder", () => {
         const handler = treeRouteFinder(exampleRoutes, path);
 
         expect(handler.isSome()).toBe(true);
-        const result = handler.unpack("Handler not found").map(h => h({ body: {} }));
+        const result = handler.unpack("Handler not found").map(h => h.handleRequest({ body: {} }));
         expect(result.v.body.message).toBe("List all users");
     });
 
@@ -71,7 +71,7 @@ describe("Tree Route Finder", () => {
         const handler = treeRouteFinder(exampleRoutes, path);
 
         expect(handler.isSome()).toBe(true);
-        const result = handler.unpack("Handler not found").map(h => h({ body: {} }));
+        const result = handler.unpack("Handler not found").map(h => h.handleRequest({ body: {} }));
         expect(result.v.body.message).toBe("Get admin user (static)");
     });
 
@@ -80,7 +80,7 @@ describe("Tree Route Finder", () => {
         const handler = treeRouteFinder(exampleRoutes, path);
 
         expect(handler.isSome()).toBe(true);
-        const result = handler.unpack("Handler not found").map(h => h({ body: {} }));
+        const result = handler.unpack("Handler not found").map(h => h.handleRequest({ body: {} }));
         expect(result.v.body.message).toBe("Get user by ID (dynamic)");
     });
 
@@ -89,7 +89,7 @@ describe("Tree Route Finder", () => {
         const handler = treeRouteFinder(exampleRoutes, path);
 
         expect(handler.isSome()).toBe(true);
-        const result = handler.unpack("Handler not found").map(h => h({ body: {} }));
+        const result = handler.unpack("Handler not found").map(h => h.handleRequest({ body: {} }));
         expect(result.v.body.message).toBe("Get user posts");
     });
 
@@ -130,7 +130,7 @@ describe("Tree Route Finder", () => {
             const premiumHandler = treeRouteFinder(routesWithPriority, premiumPath);
 
             expect(premiumHandler.isSome()).toBe(true);
-            const result = premiumHandler.unpack("Handler not found").map(h => h({ body: {} }));
+            const result = premiumHandler.unpack("Handler not found").map(h => h.handleRequest({ body: {} }));
             expect(result.v.body.message).toBe("Premium user (static)");
         });
 
@@ -156,7 +156,7 @@ describe("Tree Route Finder", () => {
             const dynamicHandler = treeRouteFinder(routesWithPriority, dynamicPath);
 
             expect(dynamicHandler.isSome()).toBe(true);
-            const result = dynamicHandler.unpack("Handler not found").map(h => h({ body: {} }));
+            const result = dynamicHandler.unpack("Handler not found").map(h => h.handleRequest({ body: {} }));
             expect(result.raw.body.message).toBe("User by ID (dynamic)");
         });
     });
@@ -182,7 +182,7 @@ describe("Tree Route Finder", () => {
             const handler = treeRouteFinder(multiDynamicRoutes, path);
 
             expect(handler.isSome()).toBe(true);
-            const result = handler.unpack("Handler not found").map(h => h({ body: {} }));
+            const result = handler.unpack("Handler not found").map(h => h.handleRequest({ body: {} }));
             expect(result.raw.body.message).toBe("Version and user ID");
         });
     });
@@ -204,7 +204,7 @@ describe("Tree Route Finder", () => {
             const handler = treeRouteFinder(dynamicOnlyRoutes, path);
 
             expect(handler.isSome()).toBe(true);
-            const result = handler.unpack("Handler not found").map(h => h({ body: {} }));
+            const result = handler.unpack("Handler not found").map(h => h.handleRequest({ body: {} }));
             expect(result.raw.body.message).toBe("Category and ID");
         });
 
@@ -236,7 +236,7 @@ describe("Tree Route Finder", () => {
             const handler = treeRouteFinder(deepRoutes, path);
 
             expect(handler.isSome()).toBe(true);
-            const result = handler.unpack("Handler not found").map(h => h({ body: {} }));
+            const result = handler.unpack("Handler not found").map(h => h.handleRequest({ body: {} }));
             expect(result.raw.body.message).toBe("Deep nested route");
         });
 

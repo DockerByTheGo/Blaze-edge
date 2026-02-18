@@ -11,7 +11,7 @@ export function combineHooks<THooks extends Hook<any, any>[]>(...hooks: THooks):
     } as any;
 }
 
-class HooksCombiner<THooks extends (Hook<any, any>)[], TName extends string> {
+export class HooksCombiner<THooks extends (Hook<any, any>)[], TName extends string> {
 
     protected constructor(private readonly hooks: THooks, private readonly name: TName) {
 

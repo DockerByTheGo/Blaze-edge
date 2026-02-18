@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { combineHooks } from "../../src/utils/combine-hooks/combineHooks";
 import type { Hook } from "@blazyts/backend-lib/src/core/types/Hooks/Hooks";
+import { combineHooks } from "../../../src/utils/combine-hooks";
 
 describe("combineHooks", () => {
     it("should combine multiple hooks into a single hook", () => {

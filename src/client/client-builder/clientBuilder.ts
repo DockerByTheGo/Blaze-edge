@@ -101,7 +101,6 @@ export class ClientBuilder<
   }
 
   createClient(): (url: string) => Client<TRouter> {
-    console.log("fhfhfhhf", this.router)
     return (url: string) => new Client(
       this.router,
       url
