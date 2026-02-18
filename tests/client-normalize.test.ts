@@ -22,7 +22,6 @@ describe("Client builder normalization", () => {
         return new Client(routeTree).routes
 
         const cleint: ClientObject<typeof routeTree>
-        cleint.jiji["/"]
 
         // runtime check: client.routes.jiji should be the handler representation
         // For our FakeHandler the runtime representation is the plain object stored in getClientRepresentation

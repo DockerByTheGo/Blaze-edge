@@ -13,7 +13,7 @@ import type { ExtractParams } from "./route-matchers/dsl/types/extractParams";
 import { treeRouteFinder } from "./route-finders";
 import z from "zod/v4";
 import { CleintBuilderConstructors } from "./client/client-builder/clientBuilder";
-import type { RouteFinder } from "@blazyts/backend-lib/src/core/server";
+import type { IRouteHandler, RouteFinder } from "@blazyts/backend-lib/src/core/server";
 
 type EmptyHooks = ReturnType<typeof Hooks.empty>
 
@@ -36,7 +36,7 @@ export class Blazy<
    * Creates a new instance of Blazy.
    * Initializes with a cache service.
    */
-  constructor(routerHooks?: THooks, routes ?: TRouterTree , routeFinder?: RouteFinder<any>) {
+  constructor(routerHooks?: THooks, routes?: TRouterTree, routeFinder?: RouteFinder<any>) {
     // const cache = new Cache();
     super(
       routerHooks ?? {
@@ -53,7 +53,18 @@ export class Blazy<
    * Override addRoute to return a Blazy instance instead of RouterObject
    * and to structure routes with "/" prefix for tree-based routing
    */
-  override addRoute(v: Parameters<RouterObject<any, any>['addRoute']>[0]): this {
+  override addRoute<
+    TPath extends string,
+    THandler extends IRouteHandler<any, any>,
+    TLocalHooks extends Record<string, any> | undefined = undefined
+  >(v: { routeMatcher: { getRouteString(): TPath }, handler: THandler, hooks?: TLocalHooks }): Blazy<
+    TRouterTree &
+    PathStringToObject<
+      TPath,
+      THandler
+    >,
+    THooks
+  > {
     const routeString = v.routeMatcher.getRouteString();
     const segments = routeString.split("/").filter(s => s !== "");
     const newRoutes = { ...this.routes };
@@ -85,7 +96,14 @@ export class Blazy<
 
     current["/"] = modifiedHandler;
 
-    return new Blazy(this.routerHooks, newRoutes, this.routeFinder) as any;
+    return new Blazy(this.routerHooks, newRoutes, this.routeFinder) as unknown as Blazy<
+      TRouterTree &
+      PathStringToObject<
+        TPath,
+        THandler
+      >,
+      THooks
+    >;
   }
 
   /**
@@ -249,7 +267,7 @@ export class Blazy<
         TPath,
         NormalRouteHandler<
           Parameters<Thandler>[0],
-           ReturnType<Thandler>
+          ReturnType<Thandler>
         >
       >,
       THooks
@@ -280,14 +298,16 @@ export class Blazy<
 
   } // can be stacked and overwritten to
 
+
+  // note if you try to introduce optional param it will lead to weird behaviour where it  creates two paths for one added handler one which is [''] and the other is the desried 
   post<
     THandler extends (arg: (TArgs extends undefined ? URecord : z.infer<TArgs>) & ExtractParams<TPath>) => unknown,
     TArgs extends z.ZodObject | undefined,
-    TPath extends string = "/",
-  >(config: { path?: TPath, handeler: THandler, args?: TArgs })  {
+    TPath extends string,
+  >(config: { path: TPath, handeler: THandler, args?: TArgs }) {
 
     return this.http({
-      path: config.path ?? "/",
+      path: config.path,
       handler: v => {
         console.log("ddd", v)
         console.log("h", v.body.verb)

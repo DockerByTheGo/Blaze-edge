@@ -10,21 +10,21 @@ function processPaymentUsingStripe(v: { amount: string }) {
 
 console.log(new Blazy()
     .post({
-        path: "/jiji/koko",
+        path: "/jiji/koko/",
         handeler: v => v,
         args: z.object({ koko: z.string() })
     }) // for now we should pass as const
     .post({
-        path: "/jiji/pllp",
+        path: "/jiji/pllp/",
         handeler: v => v,
         args: z.object({})
     })
     .post({
-        path: "jiji",
+        path: "/jiji/",
         handeler: v => v,
         args: z.object({})
     })
-    .routes
+    .createClient()
     
 
 
