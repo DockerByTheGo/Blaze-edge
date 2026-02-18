@@ -13,7 +13,9 @@ import type { ExtractParams } from "./route-matchers/dsl/types/extractParams";
 import { treeRouteFinder } from "./route-finders";
 import z from "zod/v4";
 import { CleintBuilderConstructors, ClientBuilder } from "./client/client-builder/clientBuilder";
+import { RequestObjectHelper } from "@blazyts/backend-lib/src/core/utils/RequestObjectHelper";
 import type { IRouteHandler, RouteFinder } from "@blazyts/backend-lib/src/core/server";
+import type { ClientObject } from "./client/Client";
 
 type EmptyHooks = ReturnType<typeof Hooks.empty>
 
@@ -32,6 +34,9 @@ export class Blazy<
   onShutdown: EmptyHooks
 
 }, TRouterTree> {
+  static create(): Blazy<{}, {}> {
+    return new Blazy({}, {} as any, undefined as any);
+  }
   /**
    * Creates a new instance of Blazy.
    * Initializes with a cache service.
@@ -254,7 +259,7 @@ export class Blazy<
     })
   }
 
-  private http<
+  http<
     TPath extends string,
     Thandler extends (arg: Args extends null ? URecord : Args
     ) => unknown, Args extends z.ZodObject | null = null>(v: {
@@ -411,11 +416,62 @@ export class Blazy<
 
   }
 
+  websocket(){}
+
+  websocketFromObject(){}
+
 
   brpcRoutify() { }
 
-  createClient(): ClientBuilder<TRouterTree, {beforeSend: HooksDefault, afterReceive: HooksDefault, onErrored: HooksDefault}> {
+  createClient(): ClientBuilder<TRouterTree, { beforeSend: HooksDefault, afterReceive: HooksDefault, onErrored: HooksDefault }> {
     return CleintBuilderConstructors.fromRouteTree(this.routes)
+  }
+
+  client(): ClientObject<TRouterTree> {
+    return new lll
+  }
+
+  listen(port: number = 3000) {
+    // Use Bun's built-in server to accept connections and forward requests
+    // to the router. Transform the incoming Request into a RequestObjectHelper
+    // that the router understands.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    Bun.serve({
+      port,
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore - Bun's `fetch` signature is compatible with this handler at runtime
+      fetch: async (req: Request) => {
+        try {
+          const headers: Record<string, string> = {};
+          req.headers.forEach((v, k) => (headers[k] = v));
+
+          let body: any = {};
+          const contentType = req.headers.get("content-type") || "";
+          if (contentType.includes("application/json")) {
+            try { body = await req.json(); } catch { body = {} }
+          } else {
+            try { const text = await req.text(); if (text) body = { text }; } catch { body = {} }
+          }
+
+          const url = new URL(req.url);
+          const path = url.pathname;
+
+          const requestHelper = new RequestObjectHelper<any, Record<string, string>, string>({
+            body,
+            headers,
+            path,
+          });
+
+          const res = this.route(requestHelper);
+
+          // If router returned a native Response, forward it. Otherwise try to coerce.
+          if (res instanceof Response) return res;
+          return new Response(JSON.stringify(res), { headers: { "content-type": "application/json" } });
+        } catch (e) {
+          return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { "content-type": "application/json" } });
+        }
+      },
+    });
   }
 
   applySubRouter<T extends Blazy>(v: Blazy) {
