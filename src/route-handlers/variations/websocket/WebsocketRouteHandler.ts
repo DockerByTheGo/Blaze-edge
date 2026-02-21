@@ -18,7 +18,6 @@ export class WebsocketRouteHandler<
     TMessagesSchema extends Schema,
 > implements IRouteHandler<WebSocketMessage, WebSocketResponse> {
 
-    public metadata: unknown;
     private connections = new Map<string, WebSocketConnection>();
     private heartbeatInterval?: Timer;
     private handlers: {
@@ -29,7 +28,8 @@ export class WebsocketRouteHandler<
     } = {};
 
     constructor(
-        public readonly schema: TMessagesSchema
+        public readonly schema: TMessagesSchema,
+    public metadata: IRouteHandlerMetadata
     ) {
         this.startHeartbeat();
     }

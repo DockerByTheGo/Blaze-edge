@@ -5,4 +5,4 @@ app.listen(3000)
 const k = await (await cleint.routes.jiji.koko["/"]({ koko: "" })).json()
 console.log(k)
 
-cleint.routes.rooms["/"]
+// cleint.routes.rooms["/"].send.join({name: "lool"})

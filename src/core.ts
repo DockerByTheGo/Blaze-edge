@@ -15,8 +15,8 @@ import { CleintBuilderConstructors, ClientBuilder } from "./client/client-builde
 import { RequestObjectHelper } from "@blazyts/backend-lib/src/core/utils/RequestObjectHelper";
 import type { IRouteHandler, RouteFinder } from "@blazyts/backend-lib/src/core/server";
 import type { ClientObject } from "./client/Client";
-import type { Message, Schema } from "./route-handlers/variations/websocket/WebsocketRouteHandler";
 import { WebsocketRouteHandler } from "./route-handlers/variations/websocket/WebsocketRouteHandler";
+import type { Schema } from "./route-handlers/variations/websocket/types";
 
 type EmptyHooks = ReturnType<typeof Hooks.empty>
 
@@ -443,7 +443,7 @@ export class Blazy<
   > {
     return this.addRoute({
       routeMatcher: new NormalRouting(v.path),
-      handler: new WebsocketRouteHandler(v.messages)
+      handler: new WebsocketRouteHandler(v.messages, {subRoute: v.path})
     });
   }
 
