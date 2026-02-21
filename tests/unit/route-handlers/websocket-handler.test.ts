@@ -1,7 +1,7 @@
-import { WebsocketRouteHandler } from "../../src/route-handlers/variations/websocket/WebsocketRouteHandler";
+import { WebsocketRouteHandler } from "../../../src/route-handlers/variations/websocket/WebsocketRouteHandler";
 import z from "zod/v4";
 import { describe, it, expect, expectTypeOf } from "bun:test";
-import { Message } from "../../src/route-handlers/variations/websocket/types";
+import { Message } from "../../../src/route-handlers/variations/websocket/types";
 
 describe("WebsocketRouteHandler (bun)", () => {
     const newMEssageSchema = z.object({ name: z.string(), password: z.string() })

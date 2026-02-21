@@ -307,18 +307,3 @@ export class WebsocketRouteHandler<
     }
 }
 
-// Example usage
-const handler = new WebsocketRouteHandler({
-    messagesItCanRecieve: {
-        new: new Message(z.object({ name: z.string(), password: z.string() }), v => {
-            console.log("User login attempt:", v.data);
-        })
-    },
-    messagesItCanSend: {
-        joined: new Message(z.object({ name: z.string() }), v => v.data)
-    }
-}).getClientRepresentation({ serverUrl: "" })
-
-
-
-// Client usage
