@@ -1,62 +1,24 @@
 import type { KeyOfOnlyStringKeys, URecord } from "@blazyts/better-standard-library";
-import type { IRouteHandler } from "@blazyts/backend-lib/src/core/server/router/routeHandler";
+import type { IRouteHandler } from "@blazyts/backend-lib";
 import z from "zod/v4";
 import { password, type WebSocket } from "bun";
+import type { IRouteHandlerMetadata } from "@blazyts/backend-lib/src/core/server";
+import {
+    type WebSocketMessage,
+    type WebSocketResponse,
+    type WebSocketConnection,
+    type WebSocketContext,
+    type Schema,
+    type WeboscketRouteCleintRepresentation,
+    Message
+} from "./types";
 
-export type WebSocketMessage = {
-    type: string;
-    data: URecord;
-    connectionId: string;
-};
-
-export type WebSocketResponse = {
-    type: string;
-    data: URecord;
-    targetConnectionIds?: string[]; // If not specified, broadcast to all connections
-};
-
-export type WebSocketConnection = {
-    id: string;
-    send: (message: WebSocketResponse) => void;
-    close: () => void;
-    isAlive: boolean;
-};
-
-export type WebSocketContext = {
-    connections: Map<string, WebSocketConnection>;
-    broadcast: (message: WebSocketResponse) => void;
-    sendTo: (connectionId: string, message: WebSocketResponse) => void;
-};
-
-export class Message<TSchema extends z.ZodObject> {
-
-    constructor(
-        public readonly schema: TSchema,
-        public readonly handler: (ctx: { data: z.infer<TSchema>, ws: WebSocket }) => void
-    ) { }
-}
-
-export type Schema = {
-    messagesItCanSend: Record<string, Message<z.ZodObject>>,
-    messagesItCanRecieve: Record<string, Message<z.ZodObject>>
-}
-
-
-
-export type WeboscketRouteCleintRepresentation<TServerMessagesSchema extends Schema> = {
-    handle: {
-        [Message in KeyOfOnlyStringKeys<TServerMessagesSchema["messagesItCanSend"]>]: (callback: TServerMessagesSchema["messagesItCanSend"][Message]["handler"]) => void
-    },
-    send: {
-        [Message in KeyOfOnlyStringKeys<TServerMessagesSchema["messagesItCanRecieve"]>]: (
-            data: (Parameters<TServerMessagesSchema["messagesItCanRecieve"][Message]["handler"]>[0])["data"]) => void
-    }
-}
 
 export class WebsocketRouteHandler<
     TMessagesSchema extends Schema,
 > implements IRouteHandler<WebSocketMessage, WebSocketResponse> {
 
+    public metadata: unknown;
     private connections = new Map<string, WebSocketConnection>();
     private heartbeatInterval?: Timer;
     private handlers: {
@@ -221,99 +183,98 @@ export class WebsocketRouteHandler<
         return connection;
     }
 
-    getClientRepresentation = (metadata: any): ((url: string) => WeboscketRouteCleintRepresentation<TMessagesSchema>) => {
-        return (url: string) => {
-            const wsUrl = url.replace(/^http/, "ws");
+    getClientRepresentation = (metadata: IRouteHandlerMetadata): WeboscketRouteCleintRepresentation<TMessagesSchema> => {
 
-            let ws: WebSocket | null = null;
-            let connected = false;
-            const messageHandlers = new Map<string, Function>();
-            const pendingMessages: WebSocketResponse[] = [];
+        const wsUrl = metadata.serverUrl.replace(/^http/, "ws");
 
-            const ensureConnection = (): Promise<void> => {
-                return new Promise((resolve, reject) => {
-                    if (connected && ws) {
+        let ws: WebSocket | null = null;
+        let connected = false;
+        const messageHandlers = new Map<string, Function>();
+        const pendingMessages: WebSocketResponse[] = [];
+
+        const ensureConnection = (): Promise<void> => {
+            return new Promise((resolve, reject) => {
+                if (connected && ws) {
+                    resolve();
+                    return;
+                }
+
+                try {
+                    ws = new WebSocket(wsUrl);
+
+                    ws.onopen = () => {
+                        connected = true;
+                        // Send any pending messages
+                        while (pendingMessages.length > 0) {
+                            const msg = pendingMessages.shift();
+                            if (msg && ws) {
+                                ws.send(JSON.stringify(msg));
+                            }
+                        }
                         resolve();
-                        return;
+                    };
+
+                    ws.onerror = () => {
+                        connected = false;
+                        reject(new Error("WebSocket connection failed"));
+                    };
+
+                    ws.onmessage = (event) => {
+                        try {
+                            const message = JSON.parse(event.data as string);
+                            const handler = messageHandlers.get(message.type);
+                            if (handler) {
+                                handler(message.data);
+                            }
+                        } catch (error) {
+                            console.error("Failed to parse WebSocket message", error);
+                        }
+                    };
+
+                    ws.onclose = () => {
+                        connected = false;
+                    };
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        };
+
+        return {
+            handle: new Proxy({}, {
+                get: (target, messageType: string) => (callback: Function) => {
+                    messageHandlers.set(messageType as string, callback);
+                }
+            }) as any,
+            send: new Proxy({}, {
+                get: (target, messageType: string) => async (data: any) => {
+                    const handler = this.schema.messagesItCanRecieve[messageType as string];
+                    if (!handler) {
+                        throw new Error(`Message type "${messageType}" not found in schema`);
                     }
 
                     try {
-                        ws = new WebSocket(wsUrl);
+                        handler.schema.parse(data);
+                        await ensureConnection();
 
-                        ws.onopen = () => {
-                            connected = true;
-                            // Send any pending messages
-                            while (pendingMessages.length > 0) {
-                                const msg = pendingMessages.shift();
-                                if (msg && ws) {
-                                    ws.send(JSON.stringify(msg));
-                                }
-                            }
-                            resolve();
+                        const message: WebSocketMessage = {
+                            type: messageType as string,
+                            data,
+                            connectionId: ""
                         };
 
-                        ws.onerror = () => {
-                            connected = false;
-                            reject(new Error("WebSocket connection failed"));
-                        };
-
-                        ws.onmessage = (event) => {
-                            try {
-                                const message = JSON.parse(event.data as string);
-                                const handler = messageHandlers.get(message.type);
-                                if (handler) {
-                                    handler(message.data);
-                                }
-                            } catch (error) {
-                                console.error("Failed to parse WebSocket message", error);
-                            }
-                        };
-
-                        ws.onclose = () => {
-                            connected = false;
-                        };
+                        if (ws && connected) {
+                            ws.send(JSON.stringify(message));
+                        } else {
+                            pendingMessages.push(message as any);
+                        }
+                        return true;
                     } catch (error) {
-                        reject(error);
+                        console.error(`Validation failed for message "${messageType}"`, error);
+                        return false;
                     }
-                });
-            };
-
-            return {
-                handle: new Proxy({}, {
-                    get: (target, messageType: string) => (callback: Function) => {
-                        messageHandlers.set(messageType as string, callback);
-                    }
-                }) as any,
-                send: new Proxy({}, {
-                    get: (target, messageType: string) => async (data: any) => {
-                        const handler = this.schema.messagesItCanRecieve[messageType as string];
-                        if (!handler) {
-                            throw new Error(`Message type "${messageType}" not found in schema`);
-                        }
-
-                        try {
-                            handler.schema.parse(data);
-                            await ensureConnection();
-
-                            const message: WebSocketMessage = {
-                                type: messageType as string,
-                                data,
-                                connectionId: ""
-                            };
-
-                            if (ws && connected) {
-                                ws.send(JSON.stringify(message));
-                            } else {
-                                pendingMessages.push(message as any);
-                            }
-                            return true;
-                        } catch (error) {
-                            console.error(`Validation failed for message "${messageType}"`, error);
-                            return false;
-                        }
-                    }
-                }) as any
-            };
+                }
+            }) as any
         };
     }
 
@@ -356,6 +317,8 @@ const handler = new WebsocketRouteHandler({
     messagesItCanSend: {
         joined: new Message(z.object({ name: z.string() }), v => v.data)
     }
-});
+}).getClientRepresentation({ serverUrl: "" })
+
+
 
 // Client usage
