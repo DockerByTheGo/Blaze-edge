@@ -89,7 +89,6 @@ export class WebsocketRouteHandler<
             .forEach(([messageName, message], i) => {
                 send[messageName] = (data) => {
                     let res = message.schema.parse(data)
-                    console.log("f", res)
                     const dataToSend: WebSocketMessage & {} = { body: res, path: this.metadata.subRoute, type: messageName }
                     const ddd = JSON.stringify(dataToSend)
                     console.log("sendig to websocket", ddd)

@@ -465,22 +465,6 @@ export class Blazy<
   }
 
   listen(port: number = 3000) {
-    const wsHandlers = new Map<string, WebsocketRouteHandler<any>>();
-
-    // Collect all websocket handlers from routes
-    const collectWSHandlers = (routes: any, path: string = "") => {
-      for (const [key, value] of Object.entries(routes)) {
-        const currentPath = path + "/" + key;
-        if (value instanceof WebsocketRouteHandler) {
-          wsHandlers.set(currentPath, value);
-        } else if (typeof value === "object" && value !== null && !("/" in value)) {
-          collectWSHandlers(value, currentPath);
-        }
-      }
-    };
-
-    collectWSHandlers(this.routes);
-
     const server = Bun.serve({
       port,
       fetch: async (req: Request) => {
@@ -521,6 +505,7 @@ export class Blazy<
       },
 
       websocket: {
+        data: {} as WebSocketMessage, 
         open: (ws) => {
           console.log("ff", ws.data)
           const handler = treeRouteFinder(this.routes, new Path(ws.data.pathname))
