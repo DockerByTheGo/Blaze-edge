@@ -240,6 +240,15 @@ export class WebsocketRouteHandler<
             });
         };
 
+        const send = {}
+        Object
+        .entries(this.schema.messagesItCanRecieve)
+        .forEach(([messageName, messageSchema],i) => {
+            send[messageName] = (data) => {
+                ws.
+            }
+        })
+
         return {
             handle: new Proxy({}, {
                 get: (target, messageType: string) => (callback: Function) => {

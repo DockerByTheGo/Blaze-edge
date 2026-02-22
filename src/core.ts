@@ -325,7 +325,6 @@ export class Blazy<
     return this.http<TPath, THandler>({
       path: config.path,
       handler: v => {
-        console.log("verb", v)
         if (v.verb?.indexOf("POST") > -1 && v.verb.length === 4)
           return config.handeler(v)
         return this.notFound()
@@ -427,6 +426,15 @@ export class Blazy<
 
   }
 
+
+  requestResponseWebsocket<
+    TPath extends string,
+    TSchema extends z.ZodObject
+  >(v: {
+    path: TPath,
+    TS
+  })
+
   websocket<
     TPath extends string,
     TMessages extends Schema
@@ -443,7 +451,7 @@ export class Blazy<
   > {
     return this.addRoute({
       routeMatcher: new NormalRouting(v.path),
-      handler: new WebsocketRouteHandler(v.messages, {subRoute: v.path})
+      handler: new WebsocketRouteHandler(v.messages, { subRoute: v.path })
     });
   }
 
@@ -479,18 +487,16 @@ export class Blazy<
         try {
           const url = new URL(req.url);
           const pathname = url.pathname;
+          console.log("data 4", await req.body?.json())
 
           // Check for WebSocket upgrade
-          if (req.headers.get("upgrade") === "websocket") {
-            const handler = wsHandlers.get(pathname);
-            if (handler && req.headers.get("connection")?.toLowerCase().includes("upgrade")) {
-              const upgraded = server.upgrade(req);
-              if (upgraded) {
-                handler.handleConnection(upgraded, req);
-                return undefined;
-              }
-            }
+          const success = server.upgrade(req, { data: { pathname } });
+          if (success) {
+            // Bun automatically returns a 101 Switching Protocols
+            // if the upgrade succeeds
+            return undefined;
           }
+
 
           // Handle regular HTTP requests
           const headers: Record<string, string> = {};
@@ -505,7 +511,6 @@ export class Blazy<
           }
 
           const res = this.route({ url: req.url, body, verb: req.method });
-          console.log("gg", res)
 
           // If router returned a native Response, forward it. Otherwise try to coerce.
           if (res instanceof Response) return res;
@@ -514,6 +519,20 @@ export class Blazy<
           console.log(e)
           return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { "content-type": "application/json" } });
         }
+      },
+      websocket: {
+        open: (ws) => {
+          console.log("ff", ws.data)
+          const handler = wsHandlers.get(ws.data.pathname);
+          if (handler) {
+            handler.handleConnection(ws, new Request(ws.url));
+          }
+        },
+        message: (ws, message) => {
+
+        },
+        close: (ws) => {
+        },
       },
     });
 
