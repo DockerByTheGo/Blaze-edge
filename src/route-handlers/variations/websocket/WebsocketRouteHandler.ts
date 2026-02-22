@@ -1,7 +1,4 @@
-import type { KeyOfOnlyStringKeys, URecord } from "@blazyts/better-standard-library";
 import type { IRouteHandler } from "@blazyts/backend-lib";
-import z from "zod/v4";
-import { password, type WebSocket } from "bun";
 import type { IRouteHandlerMetadata } from "@blazyts/backend-lib/src/core/server";
 import {
     type WebSocketMessage,
@@ -12,6 +9,7 @@ import {
     type WeboscketRouteCleintRepresentation,
     Message
 } from "./types";
+import { getWebsocketConnection } from "./WebsocketConnectionSingleton";
 
 
 export class WebsocketRouteHandler<
@@ -19,7 +17,6 @@ export class WebsocketRouteHandler<
 > implements IRouteHandler<WebSocketMessage, WebSocketResponse> {
 
     private connections = new Map<string, WebSocketConnection>();
-    private heartbeatInterval?: Timer;
     private handlers: {
         onConnect?: (conn: WebSocketConnection, ctx: WebSocketContext) => void;
         onMessage?: (msg: WebSocketMessage, conn: WebSocketConnection, ctx: WebSocketContext) => void;
@@ -29,9 +26,8 @@ export class WebsocketRouteHandler<
 
     constructor(
         public readonly schema: TMessagesSchema,
-    public metadata: IRouteHandlerMetadata
+        public metadata: IRouteHandlerMetadata
     ) {
-        this.startHeartbeat();
     }
 
     handleRequest(message: WebSocketMessage): WebSocketResponse {
@@ -80,239 +76,46 @@ export class WebsocketRouteHandler<
         };
     }
 
-    // WebSocket lifecycle methods
-    handleConnection(ws: WebSocket, request: Request): WebSocketConnection {
-        const connectionId = this.generateConnectionId();
-        let pingTimeout: Timer;
-
-        const connection: WebSocketConnection = {
-            id: connectionId,
-            send: (message: WebSocketResponse) => {
-                if (ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify(message));
-                }
-            },
-            close: () => {
-                ws.close();
-            },
-            isAlive: true
-        };
-
-        this.connections.set(connectionId, connection);
-
-        const context: WebSocketContext = {
-            connections: this.connections,
-            broadcast: (response: WebSocketResponse) => {
-                for (const conn of this.connections.values()) {
-                    if (conn.isAlive) {
-                        conn.send(response);
-                    }
-                }
-            },
-            sendTo: (targetConnectionId: string, response: WebSocketResponse) => {
-                const targetConnection = this.connections.get(targetConnectionId);
-                if (targetConnection && targetConnection.isAlive) {
-                    targetConnection.send(response);
-                }
-            }
-        };
-
-        ws.onopen = () => {
-            if (this.handlers.onConnect) {
-                this.handlers.onConnect(connection, context);
-            }
-        };
-
-        ws.onmessage = (event) => {
-            try {
-                const message: WebSocketMessage = {
-                    ...JSON.parse(event.data as string),
-                    connectionId
-                };
-
-                if (this.handlers.onMessage) {
-                    this.handlers.onMessage(message, connection, context);
-                }
-            } catch (error) {
-                if (this.handlers.onError) {
-                    this.handlers.onError(error as Error, connection, context);
-                }
-            }
-        };
-
-        ws.onclose = () => {
-            connection.isAlive = false;
-            this.connections.delete(connectionId);
-            clearTimeout(pingTimeout);
-
-            if (this.handlers.onDisconnect) {
-                this.handlers.onDisconnect(connection, context);
-            }
-        };
-
-        ws.onerror = (error) => {
-            if (this.handlers.onError) {
-                this.handlers.onError(new Error('WebSocket error'), connection, context);
-            }
-        };
-
-        // Heartbeat mechanism
-        const heartbeat = () => {
-            if (!connection.isAlive) return;
-
-            ws.ping();
-            pingTimeout = setTimeout(() => {
-                connection.isAlive = false;
-                ws.close();
-            }, 30000); // 30 seconds timeout
-        };
-
-        ws.onpong = () => {
-            clearTimeout(pingTimeout);
-        };
-
-        // Start heartbeat
-        heartbeat();
-        const interval = setInterval(heartbeat, 25000); // Ping every 25 seconds
-
-        // Clean up interval on close
-        ws.addEventListener('close', () => {
-            clearInterval(interval);
-        });
-
-        return connection;
-    }
 
     getClientRepresentation = (metadata: IRouteHandlerMetadata): WeboscketRouteCleintRepresentation<TMessagesSchema> => {
 
         const wsUrl = metadata.serverUrl.replace(/^http/, "ws");
 
-        let ws: WebSocket | null = null;
-        let connected = false;
-        const messageHandlers = new Map<string, Function>();
-        const pendingMessages: WebSocketResponse[] = [];
-
-        const ensureConnection = (): Promise<void> => {
-            return new Promise((resolve, reject) => {
-                if (connected && ws) {
-                    resolve();
-                    return;
-                }
-
-                try {
-                    ws = new WebSocket(wsUrl);
-
-                    ws.onopen = () => {
-                        connected = true;
-                        // Send any pending messages
-                        while (pendingMessages.length > 0) {
-                            const msg = pendingMessages.shift();
-                            if (msg && ws) {
-                                ws.send(JSON.stringify(msg));
-                            }
-                        }
-                        resolve();
-                    };
-
-                    ws.onerror = () => {
-                        connected = false;
-                        reject(new Error("WebSocket connection failed"));
-                    };
-
-                    ws.onmessage = (event) => {
-                        try {
-                            const message = JSON.parse(event.data as string);
-                            const handler = messageHandlers.get(message.type);
-                            if (handler) {
-                                handler(message.data);
-                            }
-                        } catch (error) {
-                            console.error("Failed to parse WebSocket message", error);
-                        }
-                    };
-
-                    ws.onclose = () => {
-                        connected = false;
-                    };
-                } catch (error) {
-                    reject(error);
-                }
-            });
-        };
+        let ws = getWebsocketConnection(wsUrl);
 
         const send = {}
         Object
-        .entries(this.schema.messagesItCanRecieve)
-        .forEach(([messageName, messageSchema],i) => {
-            send[messageName] = (data) => {
-                ws.
-            }
-        })
+            .entries(this.schema.messagesItCanRecieve)
+            .forEach(([messageName, message], i) => {
+                send[messageName] = (data) => {
+                    let res = message.schema.parse(data)
+                    console.log("f", res)
+                    const dataToSend: WebSocketMessage & {} = { body: res, path: this.metadata.subRoute, type: messageName }
+                    const ddd = JSON.stringify(dataToSend)
+                    console.log("sendig to websocket", ddd)
+                    ws.send(ddd)
+                    console.log("g")
+                }
+            })
+
+        const handle = {}
+        Object
+            .entries(this.schema.messagesItCanSend)
+            .forEach(
+                ([messageName, message], i) => {
+                    handle[messageName] = (callback: (data) => void) => {
+                        const res = message.schema.parse()
+                        getWebsocketConnection
+
+                    }
+                }
+            )
+
 
         return {
-            handle: new Proxy({}, {
-                get: (target, messageType: string) => (callback: Function) => {
-                    messageHandlers.set(messageType as string, callback);
-                }
-            }) as any,
-            send: new Proxy({}, {
-                get: (target, messageType: string) => async (data: any) => {
-                    const handler = this.schema.messagesItCanRecieve[messageType as string];
-                    if (!handler) {
-                        throw new Error(`Message type "${messageType}" not found in schema`);
-                    }
-
-                    try {
-                        handler.schema.parse(data);
-                        await ensureConnection();
-
-                        const message: WebSocketMessage = {
-                            type: messageType as string,
-                            data,
-                            connectionId: ""
-                        };
-
-                        if (ws && connected) {
-                            ws.send(JSON.stringify(message));
-                        } else {
-                            pendingMessages.push(message as any);
-                        }
-                        return true;
-                    } catch (error) {
-                        console.error(`Validation failed for message "${messageType}"`, error);
-                        return false;
-                    }
-                }
-            }) as any
+            handle,
+            send
         };
     }
 
-    private generateConnectionId(): string {
-        return `ws_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    }
-
-    private startHeartbeat() {
-        // Global heartbeat cleanup for dead connections
-        this.heartbeatInterval = setInterval(() => {
-            for (const [id, connection] of this.connections) {
-                if (!connection.isAlive) {
-                    this.connections.delete(id);
-                }
-            }
-        }, 60000); // Clean up every minute
-    }
-
-    destroy() {
-        if (this.heartbeatInterval) {
-            clearInterval(this.heartbeatInterval);
-        }
-
-        // Close all connections
-        for (const connection of this.connections.values()) {
-            connection.close();
-        }
-
-        this.connections.clear();
-    }
 }
-

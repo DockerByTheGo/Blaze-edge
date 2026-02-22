@@ -3,8 +3,8 @@ import type z from "zod/v4";
 
 export type WebSocketMessage = {
     type: string;
-    data: URecord;
-    connectionId: string;
+    body: URecord;
+    path: string;
 };
 
 export type WebSocketResponse = {

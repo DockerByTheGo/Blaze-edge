@@ -1,16 +1,19 @@
 
+import { password, type WebSocket } from "bun";
+import { ur } from "zod/locales";
 class WebsocketConnectionSingleTon {
-    static ws: WebSocket | null;
+    static ws: WebSocket | null = null;
 
-    static get(){
-        if(WebsocketConnectionSingleTon.ws === null) {
-            WebsocketConnectionSingleTon.ws =  null
-        }else{
+    static get(url: string) {
+        if (WebsocketConnectionSingleTon.ws === null) {
+            WebsocketConnectionSingleTon.ws = new WebSocket(url)
+            return WebsocketConnectionSingleTon.ws
+        } else {
             return WebsocketConnectionSingleTon.ws
         }
-        
+
     }
 }
 
 
-export const getWebsocketConnection =  WebsocketConnectionSingleTon.get
+export const getWebsocketConnection = (url: string) => WebsocketConnectionSingleTon.get(url)

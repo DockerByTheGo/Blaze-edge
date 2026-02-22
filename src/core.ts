@@ -16,7 +16,7 @@ import { RequestObjectHelper } from "@blazyts/backend-lib/src/core/utils/Request
 import type { IRouteHandler, RouteFinder } from "@blazyts/backend-lib/src/core/server";
 import type { ClientObject } from "./client/Client";
 import { WebsocketRouteHandler } from "./route-handlers/variations/websocket/WebsocketRouteHandler";
-import type { Schema } from "./route-handlers/variations/websocket/types";
+import type { Schema, WebSocketMessage } from "./route-handlers/variations/websocket/types";
 
 type EmptyHooks = ReturnType<typeof Hooks.empty>
 
@@ -487,11 +487,10 @@ export class Blazy<
         try {
           const url = new URL(req.url);
           const pathname = url.pathname;
-          console.log("data 4", await req.body?.json())
 
-          // Check for WebSocket upgrade
-          const success = server.upgrade(req, { data: { pathname } });
+          const success = server.upgrade(req, { data: { pathname, body: {}, type: "join" } });
           if (success) {
+
             // Bun automatically returns a 101 Switching Protocols
             // if the upgrade succeeds
             return undefined;
@@ -520,16 +519,17 @@ export class Blazy<
           return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { "content-type": "application/json" } });
         }
       },
+
       websocket: {
         open: (ws) => {
           console.log("ff", ws.data)
-          const handler = wsHandlers.get(ws.data.pathname);
-          if (handler) {
-            handler.handleConnection(ws, new Request(ws.url));
-          }
+          const handler = treeRouteFinder(this.routes, new Path(ws.data.pathname))
+          handler
+            .unpack()
+            .map(v => v.schema.messagesItCanRecieve[ws.data.type].handler(ws.data.body))
         },
         message: (ws, message) => {
-
+          console.log("dfff", message)
         },
         close: (ws) => {
         },

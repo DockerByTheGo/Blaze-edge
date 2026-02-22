@@ -30,7 +30,7 @@ export const app = Blazy
         path: "/rooms",
         messages: {
             messagesItCanRecieve: {
-                join: new Message(z.object({ name: z.string() }), v => v.data.name)
+                join: new Message(z.object({ name: z.string() }), v => console.log("recieved message", v))
             },
             messagesItCanSend: {
                 joined: new Message(z.object({ name: z.string() }), v => v.data.name)
