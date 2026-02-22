@@ -37,7 +37,7 @@ export class Client<TRouteTree extends RouteTree> {
                 const node = tree[key] as IRouteHandler<any, any>;
                 if (node && typeof node.getClientRepresentation === "function") {
                     out[key] = node.getClientRepresentation({
-                        url: this.url + node.metadata.subRoute,
+                        serverUrl: this.url + node.metadata.subRoute,
                         path: currentPath,
                         ...node.metadata
                     });

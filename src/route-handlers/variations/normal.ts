@@ -17,6 +17,7 @@ function withStaticNew<T extends new (...args: any[]) => any>(Class: T) {
   };
 }
 
+type NormalRouteHandlerClientRepresentation<TCtx, TReturn> = (meta: IRouteHandlerMetadata) => (v: TCtx) => Promise<{ json(): Promise<TReturn> }>
 
 
 export class NormalRouteHandler<
@@ -33,14 +34,14 @@ export class NormalRouteHandler<
 
   }
 
-  getClientRepresentation: (meta: URecord) => (v: TCtx) => Promise<{ json(): Promise<TReturn> }> = (meta: URecord) => async (v: TCtx) => {
+  getClientRepresentation: NormalRouteHandlerClientRepresentation<TCtx, TReturn> = (meta) => async v => {
     const metadata: IRouteHandlerMetadata = {
       ...this.metadata,
       ...meta
     }
 
 
-    return await fetch(metadata.url, {
+    return await fetch(metadata.serverUrl, {
       method: metadata.verb,
       body: JSON.stringify(v)
     })

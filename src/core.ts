@@ -1,9 +1,8 @@
 import { RouterObject } from "@blazyts/backend-lib";
 import type { PathStringToObject, RouterHooks, type RouteTree } from "@blazyts/backend-lib/src/core/server/router/types";
-import type { And, IFunc, TypeSafeOmit, URecord, } from "@blazyts/better-standard-library";
+import type { And, IFunc, KeyOfOnlyStringKeys, TypeSafeOmit, URecord, } from "@blazyts/better-standard-library";
 import { BasicValidator, ifNotNone, map, NormalFunc, objectEntries, Optionable, Try } from "@blazyts/better-standard-library";
 import { FunctionRouteHandler } from "./route-handlers/variations/function/FunctionRouteHandler";
-import type { Schema } from "@blazyts/better-standard-library/src/others/validator/schema";
 import { Path } from "@blazyts/backend-lib/src/core/server/router/utils/path/Path";
 import { FileRouteHandler, NormalRouteHandler } from "./route-handlers/variations";
 import { DSLRouting } from "./route-matchers/dsl/main";
@@ -16,6 +15,8 @@ import { CleintBuilderConstructors, ClientBuilder } from "./client/client-builde
 import { RequestObjectHelper } from "@blazyts/backend-lib/src/core/utils/RequestObjectHelper";
 import type { IRouteHandler, RouteFinder } from "@blazyts/backend-lib/src/core/server";
 import type { ClientObject } from "./client/Client";
+import { WebsocketRouteHandler } from "./route-handlers/variations/websocket/WebsocketRouteHandler";
+import type { Schema, WebSocketMessage } from "./route-handlers/variations/websocket/types";
 
 type EmptyHooks = ReturnType<typeof Hooks.empty>
 
@@ -324,9 +325,8 @@ export class Blazy<
     return this.http<TPath, THandler>({
       path: config.path,
       handler: v => {
-        console.log("verb", v)
         if (v.verb?.indexOf("POST") > -1 && v.verb.length === 4)
-        return config.handeler(v)
+          return config.handeler(v)
         return this.notFound()
       },
       meta: { verb: "POST" }
@@ -426,7 +426,34 @@ export class Blazy<
 
   }
 
-  websocket() { }
+
+  requestResponseWebsocket<
+    TPath extends string,
+    TSchema extends z.ZodObject
+  >(v: {
+    path: TPath,
+    TS
+  })
+
+  websocket<
+    TPath extends string,
+    TMessages extends Schema
+  >(v: {
+    path: TPath,
+    messages: TMessages
+  }): Blazy<
+    TRouterTree &
+    PathStringToObject<
+      TPath,
+      WebsocketRouteHandler<TMessages>
+    >,
+    THooks
+  > {
+    return this.addRoute({
+      routeMatcher: new NormalRouting(v.path),
+      handler: new WebsocketRouteHandler(v.messages, { subRoute: v.path })
+    });
+  }
 
   websocketFromObject() { }
 
@@ -442,6 +469,19 @@ export class Blazy<
       port,
       fetch: async (req: Request) => {
         try {
+          const url = new URL(req.url);
+          const pathname = url.pathname;
+
+          const success = server.upgrade(req, { data: { pathname, body: {}, type: "join" } });
+          if (success) {
+
+            // Bun automatically returns a 101 Switching Protocols
+            // if the upgrade succeeds
+            return undefined;
+          }
+
+
+          // Handle regular HTTP requests
           const headers: Record<string, string> = {};
           req.headers.forEach((v, k) => (headers[k] = v));
 
@@ -453,10 +493,7 @@ export class Blazy<
             try { const text = await req.text(); if (text) body = { text }; } catch { body = {} }
           }
 
-
-
           const res = this.route({ url: req.url, body, verb: req.method });
-          console.log("gg", res)
 
           // If router returned a native Response, forward it. Otherwise try to coerce.
           if (res instanceof Response) return res;
@@ -465,6 +502,22 @@ export class Blazy<
           console.log(e)
           return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { "content-type": "application/json" } });
         }
+      },
+
+      websocket: {
+        data: {} as WebSocketMessage, 
+        open: (ws) => {
+          console.log("ff", ws.data)
+          const handler = treeRouteFinder(this.routes, new Path(ws.data.pathname))
+          handler
+            .unpack()
+            .map(v => v.schema.messagesItCanRecieve[ws.data.type].handler(ws.data.body))
+        },
+        message: (ws, message) => {
+          console.log("dfff", message)
+        },
+        close: (ws) => {
+        },
       },
     });
 
