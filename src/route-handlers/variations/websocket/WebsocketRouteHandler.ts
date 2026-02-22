@@ -17,12 +17,6 @@ export class WebsocketRouteHandler<
 > implements IRouteHandler<WebSocketMessage, WebSocketResponse> {
 
     private connections = new Map<string, WebSocketConnection>();
-    private handlers: {
-        onConnect?: (conn: WebSocketConnection, ctx: WebSocketContext) => void;
-        onMessage?: (msg: WebSocketMessage, conn: WebSocketConnection, ctx: WebSocketContext) => void;
-        onDisconnect?: (conn: WebSocketConnection, ctx: WebSocketContext) => void;
-        onError?: (error: Error, conn: WebSocketConnection, ctx: WebSocketContext) => void;
-    } = {};
 
     constructor(
         public readonly schema: TMessagesSchema,
@@ -31,27 +25,6 @@ export class WebsocketRouteHandler<
     }
 
     handleRequest(message: WebSocketMessage): WebSocketResponse {
-        const connection = this.connections.get(message.connectionId);
-        if (!connection) {
-            throw new Error(`Connection ${message.connectionId} not found`);
-        }
-
-        const context: WebSocketContext = {
-            connections: this.connections,
-            broadcast: (response: WebSocketResponse) => {
-                for (const conn of this.connections.values()) {
-                    if (conn.isAlive) {
-                        conn.send(response);
-                    }
-                }
-            },
-            sendTo: (connectionId: string, response: WebSocketResponse) => {
-                const targetConnection = this.connections.get(connectionId);
-                if (targetConnection && targetConnection.isAlive) {
-                    targetConnection.send(response);
-                }
-            }
-        };
 
         const messageHandler = this.schema.messagesItCanRecieve[message.type];
         if (messageHandler) {
@@ -59,15 +32,9 @@ export class WebsocketRouteHandler<
                 const parsed = messageHandler.schema.parse(message.data);
                 messageHandler.handler({ data: parsed, ws: undefined as any });
             } catch (error) {
-                if (this.handlers.onError) {
-                    this.handlers.onError(error as Error, connection, context);
                 }
             }
-        }
 
-        if (this.handlers.onMessage) {
-            this.handlers.onMessage(message, connection, context);
-        }
 
         // Default response if no handler provided
         return {
@@ -87,13 +54,25 @@ export class WebsocketRouteHandler<
         Object
             .entries(this.schema.messagesItCanRecieve)
             .forEach(([messageName, message], i) => {
-                send[messageName] = (data) => {
+                send[messageName] = async (data) => {
                     let res = message.schema.parse(data)
                     const dataToSend: WebSocketMessage & {} = { body: res, path: this.metadata.subRoute, type: messageName }
                     const ddd = JSON.stringify(dataToSend)
                     console.log("sendig to websocket", ddd)
-                    ws.send(ddd)
-                    console.log("g")
+                    
+                    // Wait for WebSocket to be open
+                    if (ws.readyState === WebSocket.CONNECTING) {
+                        await new Promise((resolve) => {
+                            ws.addEventListener('open', resolve, { once: true });
+                        });
+                    }
+                    
+                    if (ws.readyState === WebSocket.OPEN) {
+                        ws.send(ddd)
+                        console.log("g")
+                    } else {
+                        console.error("WebSocket is not open, state:", ws.readyState);
+                    }
                 }
             })
 
