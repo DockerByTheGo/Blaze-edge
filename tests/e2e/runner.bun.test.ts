@@ -11,6 +11,10 @@ describe("e2e simple app", () => {
       const httpReq = await (await client.routes.jiji.koko["/"]({ koko: "" })).json();
       // expect(httpReq).toMatchObject({v: {body: "fr"}})
       const websocketReq = (await client.routes.rooms["/"].send.join({ name: "" }))
+      
+      // Wait for message to be processed
+      await new Promise(resolve => setTimeout(resolve, 100));
+      console.log("Test completed, waiting done");
     } finally {
       try { server.stop?.(); } catch { }
     }

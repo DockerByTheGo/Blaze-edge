@@ -5,6 +5,7 @@ export type WebSocketMessage = {
     type: string;
     body: URecord;
     path: string;
+    connectionId?: string;
 };
 
 export type WebSocketResponse = {

@@ -472,16 +472,18 @@ export class Blazy<
           const url = new URL(req.url);
           const pathname = url.pathname;
 
-          const success = server.upgrade(req, { data: { pathname, body: {}, type: "join" } });
-          if (success) {
-
-            // Bun automatically returns a 101 Switching Protocols
-            // if the upgrade succeeds
-            return undefined;
+          // Check if this is a WebSocket upgrade request
+          const upgradeHeader = req.headers.get("upgrade");
+          
+          if (upgradeHeader?.toLowerCase() === "websocket") {
+            const success = server.upgrade(req, { data: { pathname, body: {}, type: "join" } });
+            console.log("Upgrade success:", success);
+            if (success) {
+              return undefined;
+            }
           }
 
 
-          // Handle regular HTTP requests
           const headers: Record<string, string> = {};
           req.headers.forEach((v, k) => (headers[k] = v));
 
@@ -505,18 +507,29 @@ export class Blazy<
       },
 
       websocket: {
-        data: {} as WebSocketMessage, 
+        data: {} as WebSocketMessage & { connectionId?: string }, 
         open: (ws) => {
-          console.log("ff", ws.data)
-          const handler = treeRouteFinder(this.routes, new Path(ws.data.pathname))
-          handler
-            .unpack()
-            .map(v => v.schema.messagesItCanRecieve[ws.data.type].handler(ws.data.body))
+          // Generate a unique connection ID
+          const connectionId = crypto.randomUUID();
+          ws.data.connectionId = connectionId;
+          console.log("WebSocket connected:", connectionId, "pathname:", ws.data.pathname);
         },
         message: (ws, message) => {
-          console.log("dfff", message)
+            const parsedMessage = JSON.parse(message.toString()) as WebSocketMessage;
+            
+            // Find the handler for this route
+            const handlerOptional = treeRouteFinder(this.routes, new Path(ws.data.pathname));
+            
+            if (handlerOptional.isNone()) {
+              console.error("No handler found for path:", ws.data.pathname);
+              return;
+            }
+            
+            handlerOptional.unpack().map(v => v.schema.messagesItCanRecieve[parsedMessage.type].handler({data: parsedMessage.body, ws}))
+            
         },
         close: (ws) => {
+          console.log("WebSocket closed:", ws.data.connectionId);
         },
       },
     });

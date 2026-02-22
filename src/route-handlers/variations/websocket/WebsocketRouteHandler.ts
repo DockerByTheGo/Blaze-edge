@@ -58,7 +58,6 @@ export class WebsocketRouteHandler<
                     let res = message.schema.parse(data)
                     const dataToSend: WebSocketMessage & {} = { body: res, path: this.metadata.subRoute, type: messageName }
                     const ddd = JSON.stringify(dataToSend)
-                    console.log("sendig to websocket", ddd)
                     
                     // Wait for WebSocket to be open
                     if (ws.readyState === WebSocket.CONNECTING) {
