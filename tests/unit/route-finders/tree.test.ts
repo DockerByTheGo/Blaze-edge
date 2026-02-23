@@ -53,7 +53,6 @@ describe("Tree Route Finder", () => {
     test("should match root route", () => {
         const path = new Path("/");
         const handler = treeRouteFinder(exampleRoutes, path);
-        console.log("jijijijiji", handler)
         expect(handler.isSome()).toBe(true);
         const result = handler.unpack("Handler not found").map(h => h.GET.handleRequest({ body: {} }));
         expect(result.v.body.message).toBe("Root handler");

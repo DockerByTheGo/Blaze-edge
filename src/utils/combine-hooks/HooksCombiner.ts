@@ -33,15 +33,29 @@ export class HooksCombiner<THooks extends (Hook<any, any>)[], TName extends stri
             (arg) => {
                 if (this.hooks.length === 0) return arg;
                 
-                const result = this.hooks.reduce((acc, hook) => {
-                    // If acc is a Promise, chain the next handler
-                    if (acc instanceof Promise) {
-                        return acc.then(resolved => hook.handler(resolved));
+                let result: any = arg;
+                let asyncStartIndex = -1;
+                
+                // Execute hooks until we hit an async one
+                for (let i = 0; i < this.hooks.length; i++) {
+                    result = this.hooks[i].handler(result);
+                    if (result instanceof Promise) {
+                        asyncStartIndex = i + 1;
+                        break;
                     }
-                    // Otherwise, just call the handler
-                    return hook.handler(acc);
-                }, arg);
-
+                }
+                
+                // If we encountered an async hook, handle the rest asynchronously
+                if (asyncStartIndex !== -1) {
+                    return (async () => {
+                        // result is already a Promise from the hook that returned it
+                        for (let i = asyncStartIndex; i < this.hooks.length; i++) {
+                            result = await this.hooks[i].handler(result);
+                        }
+                        return result;
+                    })();
+                }
+                
                 return result;
             }
         ) as any

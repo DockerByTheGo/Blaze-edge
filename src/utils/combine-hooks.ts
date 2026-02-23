@@ -8,15 +8,31 @@ export function combineHooks<THooks extends Hook<any, any>[]>(...hooks: THooks):
     return new Hook(
         hooks.map(h => h.name).join(" -> "),
         (arg) => {
-            const result = hooks.reduce((acc, hook) => {
-                // If acc is a Promise, chain the next handler
-                if (acc instanceof Promise) {
-                    return acc.then(resolved => hook.handler(resolved));
+            let result: any = arg;
+            let asyncStartIndex = -1;
+            
+            // Execute hooks until we hit an async one
+            for (let i = 0; i < hooks.length; i++) {
+                result = hooks[i].handler(result);
+                if (result instanceof Promise) {
+                    asyncStartIndex = i + 1;
+                    break;
                 }
-                // Otherwise, just call the handler
-                return hook.handler(acc);
-            }, arg);
-
+            }
+            
+            // If we encountered an async hook, handle the rest asynchronously
+            if (asyncStartIndex !== -1) {
+                return (async () => {
+                    // Await the first Promise
+                    result = await result;
+                    // Then execute remaining hooks
+                    for (let i = asyncStartIndex; i < hooks.length; i++) {
+                        result = await hooks[i].handler(result);
+                    }
+                    return result;
+                })();
+            }
+            
             return result;
         }
     ) as any;
@@ -36,7 +52,36 @@ export class HooksCombiner<THooks extends (Hook<any, any>)[], TName extends stri
     build(): Hook<TName, (arg: THooks extends [] ? any : Parameters<First<THooks>["handler"]>[0]) => THooks extends [] ? any : ReturnType<Last<THooks>["handler"]>> {
         return new Hook(
             this.name,
-            arg => this.hooks.length === 0 ? arg : this.hooks.reduce((acc, hook) => hook.handler(acc), arg)
+            (arg) => {
+                if (this.hooks.length === 0) return arg;
+                
+                let result: any = arg;
+                let asyncStartIndex = -1;
+                
+                // Execute hooks until we hit an async one
+                for (let i = 0; i < this.hooks.length; i++) {
+                    result = this.hooks[i].handler(result);
+                    if (result instanceof Promise) {
+                        asyncStartIndex = i + 1;
+                        break;
+                    }
+                }
+                
+                // If we encountered an async hook, handle the rest asynchronously
+                if (asyncStartIndex !== -1) {
+                    return (async () => {
+                        // Await the first Promise
+                        result = await result;
+                        // Then execute remaining hooks
+                        for (let i = asyncStartIndex; i < this.hooks.length; i++) {
+                            result = await this.hooks[i].handler(result);
+                        }
+                        return result;
+                    })();
+                }
+                
+                return result;
+            }
         ) as any
     }
 

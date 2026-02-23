@@ -1,7 +1,7 @@
 import { describe, it, expect, expectTypeOf } from "bun:test";
 import { Blazy } from "../src/core";
-import { Message } from "../src/route-handlers/variations/ws/types";
 import z from "zod/v4";
+import { Message } from "../src/route-handlers/variations/websocket/types";
 
 describe("Type checking test", () => {
   it("should have correct types for protocol-based routes", () => {

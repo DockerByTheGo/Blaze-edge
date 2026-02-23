@@ -8,18 +8,23 @@ export class FunctionRouteHandler<
     {body: TFunc["TGetArgs"]},
     {body: TFunc["TGetReturnType"]}
 > {
-    constructor(public readonly func: TFunc){
+    public readonly metadata: { subRoute: string };
+
+    constructor(public readonly func: TFunc, subRoute?: string){
+        this.metadata = {
+            subRoute: subRoute ?? `/rpc/${this.func.name}`,
+        };
 
     }   
     
     handleRequest: (arg: { body: TFunc["TGetArgs"]; }) => { body: TFunc["TGetReturnType"]; }  = (arg) => {
         new BasicValidator(this.func.argsSchema).validate(arg.body)
 
-        return this.func.execute(arg)
+        return this.func.execute(arg.body)
     }
 
-    getClientRepresentation = () => ({
+    getClientRepresentation = (metadata: { subRoute: string }) => ({
         method: "post",
-        path: "/rpc/" + this.func.name
+        path: metadata.subRoute
     })
 }
