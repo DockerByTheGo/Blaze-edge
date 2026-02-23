@@ -19,7 +19,7 @@ describe("WebsocketRouteHandler (bun)", () => {
                 v => v.data
             )
         }
-    });
+    }, {});
 
     const client = handler.getClientRepresentation({ serverUrl: "http://localhost:3000" });
 
@@ -34,8 +34,8 @@ describe("WebsocketRouteHandler (bun)", () => {
             new: (arg) => { }
         }
 
-        expect(client.handle).toBe(expectedHndle);
-        expect(client.send).toBe(expectedSend);
+        expect(client.handle.joined).toBeFunction();
+        expect(client.send.new).toBeFunction();
     });
 
     it("exposes a correctly typed cleint", () => {

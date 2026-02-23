@@ -8,9 +8,19 @@ export type Routes<R extends RouteTree> = {
 }
 
 export type ClientObject<T extends RouteTree> = {
-    [CurrentRoute in KeyOfOnlyStringKeys<T>]: T[CurrentRoute] extends IRouteHandler<any, any>
-    ? ReturnType<T[CurrentRoute]["getClientRepresentation"]>
-    : ClientObject<T[CurrentRoute]>
+    [CurrentRoute in KeyOfOnlyStringKeys<T>]: 
+        // If this is the "/" key, it contains protocol handlers
+        CurrentRoute extends "/" 
+            ? {
+                [Protocol in KeyOfOnlyStringKeys<T[CurrentRoute]>]: 
+                    T[CurrentRoute][Protocol] extends IRouteHandler<any, any>
+                        ? ReturnType<T[CurrentRoute][Protocol]["getClientRepresentation"]>
+                        : never
+              }
+            // Otherwise, recurse into nested routes
+            : T[CurrentRoute] extends IRouteHandler<any, any>
+                ? ReturnType<T[CurrentRoute]["getClientRepresentation"]>
+                : ClientObject<T[CurrentRoute]>
 }
 
 export class ClientConstructors {
@@ -33,15 +43,26 @@ export class Client<TRouteTree extends RouteTree> {
         const build = (tree: any, path: string = "") => {
             const out: any = {};
             for (const key of Object.keys(tree ?? {})) {
-                const currentPath = path ? `${path}/${key}` : `/${key}`;
-                const node = tree[key] as IRouteHandler<any, any>;
-                if (node && typeof node.getClientRepresentation === "function") {
-                    out[key] = node.getClientRepresentation({
-                        serverUrl: this.url + node.metadata.subRoute,
-                        path: currentPath,
-                        ...node.metadata
-                    });
+                const node = tree[key];
+                
+                // Check if this is the "/" key with protocol handlers
+                if (key === "/") {
+                    // This is a route endpoint with protocol handlers
+                    const protocolHandlers: any = {};
+                    for (const protocol of Object.keys(node)) {
+                        const handler = node[protocol] as IRouteHandler<any, any>;
+                        if (handler && typeof handler.getClientRepresentation === "function") {
+                            protocolHandlers[protocol] = handler.getClientRepresentation({
+                                serverUrl: this.url + handler.metadata.subRoute,
+                                path: path,
+                                ...handler.metadata
+                            });
+                        }
+                    }
+                    out[key] = protocolHandlers;
                 } else {
+                    // This is a path segment, recurse
+                    const currentPath = path ? `${path}/${key}` : `/${key}`;
                     out[key] = build(node ?? {}, currentPath);
                 }
             }

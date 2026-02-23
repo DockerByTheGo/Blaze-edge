@@ -15,8 +15,8 @@ import { CleintBuilderConstructors, ClientBuilder } from "./client/client-builde
 import { RequestObjectHelper } from "@blazyts/backend-lib/src/core/utils/RequestObjectHelper";
 import type { IRouteHandler, RouteFinder } from "@blazyts/backend-lib/src/core/server";
 import type { ClientObject } from "./client/Client";
-import { WebsocketRouteHandler } from "./route-handlers/variations/websocket/WebsocketRouteHandler";
-import type { Schema, WebSocketMessage } from "./route-handlers/variations/websocket/types";
+import type { HandlerProtocol } from "./types";
+import { WebsocketRouteHandler } from "./route-handlers/variations/websocket";
 
 type EmptyHooks = ReturnType<typeof Hooks.empty>
 
@@ -66,16 +66,19 @@ export class Blazy<
   override addRoute<
     TPath extends string,
     THandler extends IRouteHandler<any, any>,
-    TLocalHooks extends Record<string, any> | undefined = undefined
+    TProtocol extends HandlerProtocol,
+    TLocalHooks extends Record<string, any> | undefined = undefined,
   >(v: {
     routeMatcher: { getRouteString(): TPath },
     handler: THandler,
-    hooks?: TLocalHooks
+    hooks?: TLocalHooks,
+    protocol?: TProtocol
   }): Blazy<
     TRouterTree &
     PathStringToObject<
       TPath,
-      THandler
+      THandler,
+      TProtocol
     >,
     THooks
   > {
@@ -93,7 +96,12 @@ export class Blazy<
       current = current[segment];
     }
 
-    // Place handler at "/" key
+    // Initialize "/" object if it doesn't exist
+    if (!current["/"]) {
+      current["/"] = {};
+    }
+
+    // Place handler at protocol key under "/"
     const modifiedHandler: any = {
       ...v.handler,
       getClientRepresentation: v.handler.getClientRepresentation,
@@ -109,13 +117,15 @@ export class Blazy<
       }
     };
 
-    current["/"] = modifiedHandler;
+    const protocol = v.protocol || 'http';
+    current["/"][protocol] = modifiedHandler;
 
     return new Blazy(this.routerHooks, newRoutes, this.routeFinder) as unknown as Blazy<
       TRouterTree &
       PathStringToObject<
         TPath,
-        THandler
+        THandler,
+        TProtocol
       >,
       THooks
     >;
@@ -273,12 +283,13 @@ export class Blazy<
     TPath extends string,
     Thandler extends (arg: Args extends null ? URecord : Args
     ) => unknown,
-    Args extends z.ZodObject | null = null
+    TProtocol extends HandlerProtocol,
+    Args extends z.ZodObject | null = null,
   >(v: {
     path: TPath,
     handler: Thandler,
     args?: Args,
-    meta?: URecord
+    meta?: URecord & { protocol?: TProtocol }
   }): Blazy<
     TRouterTree &
     PathStringToObject<
@@ -286,13 +297,15 @@ export class Blazy<
       NormalRouteHandler<
         Parameters<Thandler>[0],
         ReturnType<Thandler>
-      >
+      >,
+      TProtocol
     >,
     THooks
   > {
     const metadata = { subRoute: v.path, ...v.meta }
     return this.addRoute({
       routeMatcher: new DSLRouting(v.path),
+      protocol: (v.meta?.protocol as TProtocol) || ('http' as TProtocol),
       // the checking of definition of args could be done using a single normal routing handler and oing the check inside but this would hurt performace a bit and yeah we are missing the forst for the trees given the awful performace of the framework but its so easy to do it here 
       handler: (v.args)
         ? new NormalRouteHandler(arg => {
@@ -320,16 +333,27 @@ export class Blazy<
     THandler extends (arg: (TArgs extends undefined ? URecord : z.infer<TArgs>) & ExtractParams<TPath>) => unknown,
     TArgs extends z.ZodObject | undefined,
     TPath extends string,
-  >(config: { path: TPath, handeler: THandler, args?: TArgs }) {
+  >(config: { path: TPath, handeler: THandler, args?: TArgs }): Blazy<
+    TRouterTree &
+    PathStringToObject<
+      TPath,
+      NormalRouteHandler<
+        Parameters<THandler>[0],
+        ReturnType<THandler>
+      >,
+      'POST'
+    >,
+    THooks
+  > {
 
-    return this.http<TPath, THandler>({
+    return this.http<TPath, THandler, any, 'POST'>({
       path: config.path,
       handler: v => {
         if (v.verb?.indexOf("POST") > -1 && v.verb.length === 4)
           return config.handeler(v)
         return this.notFound()
       },
-      meta: { verb: "POST" }
+      meta: { verb: "POST", protocol: "POST" as const }
     })
 
   }
@@ -358,12 +382,24 @@ export class Blazy<
     path: TPath,
     handler: THandler,
     args: TArgs
-  }): Blazy {
+  }): Blazy<
+    TRouterTree &
+    PathStringToObject<
+      TPath,
+      NormalRouteHandler<
+        Parameters<THandler>[0],
+        ReturnType<THandler>
+      >,
+      'GET'
+    >,
+    THooks
+  > {
 
-    return this.http({
+    return this.http<TPath, THandler, any, 'GET'>({
       path: config.path,
       handler: v => v.path === "GET" ? config.handler(v) : this.notFound(),
-      args: config.args
+      args: config.args,
+      meta: { verb: "GET", protocol: "GET" as const }
     })
 
   }
@@ -435,7 +471,7 @@ export class Blazy<
     TS
   })
 
-  websocket<
+  ws<
     TPath extends string,
     TMessages extends Schema
   >(v: {
@@ -445,17 +481,19 @@ export class Blazy<
     TRouterTree &
     PathStringToObject<
       TPath,
-      WebsocketRouteHandler<TMessages>
+      WsRouteHandler<TMessages>,
+      "ws"
     >,
     THooks
   > {
     return this.addRoute({
       routeMatcher: new NormalRouting(v.path),
-      handler: new WebsocketRouteHandler(v.messages, { subRoute: v.path })
+      handler: new WebsocketRouteHandler(v.messages, { subRoute: v.path }),
+      protocol: 'ws' 
     });
   }
 
-  websocketFromObject() { }
+  wsFromObject() { }
 
 
   brpcRoutify() { }
@@ -507,7 +545,7 @@ export class Blazy<
       },
 
       websocket: {
-        data: {} as WebSocketMessage & { connectionId?: string }, 
+        data: {} as WsMessage & { connectionId?: string }, 
         open: (ws) => {
           // Generate a unique connection ID
           const connectionId = crypto.randomUUID();
@@ -515,7 +553,7 @@ export class Blazy<
           console.log("WebSocket connected:", connectionId, "pathname:", ws.data.pathname);
         },
         message: (ws, message) => {
-            const parsedMessage = JSON.parse(message.toString()) as WebSocketMessage;
+            const parsedMessage = JSON.parse(message.toString()) as WsMessage;
             
             // Find the handler for this route
             const handlerOptional = treeRouteFinder(this.routes, new Path(ws.data.pathname));
@@ -525,8 +563,24 @@ export class Blazy<
               return;
             }
             
-            handlerOptional.unpack().map(v => v.schema.messagesItCanRecieve[parsedMessage.type].handler({data: parsedMessage.body, ws}))
+            const routeHandlers = handlerOptional.unpack();
             
+            // Get the ws handler from the protocol-organized structure
+            const routeHandler = routeHandlers.valueOf().ws;
+            
+            if (!routeHandler) {
+              console.error("No ws handler found for path:", ws.data.pathname);
+              console.log("Available protocols:", Object.keys(routeHandlers));
+              return;
+            }
+            
+            // Call the message handler directly from the schema
+            const messageHandler = routeHandler.schema.messagesItCanRecieve[parsedMessage.type];
+            if (messageHandler) {
+              messageHandler.handler({ data: parsedMessage.body, ws });
+            } else {
+              console.error("No message handler for type:", parsedMessage.type);
+            }
         },
         close: (ws) => {
           console.log("WebSocket closed:", ws.data.connectionId);

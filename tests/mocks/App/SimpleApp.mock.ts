@@ -26,7 +26,7 @@ export const app = Blazy
         handeler: v => v,
         args: z.object({ v: z.string() })
     })
-    .websocket({
+    .ws({
         path: "/rooms",
         messages: {
             messagesItCanRecieve: {

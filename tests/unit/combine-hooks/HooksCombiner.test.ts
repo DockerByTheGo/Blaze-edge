@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import type { Hook } from "@blazyts/backend-lib/src/core/types/Hooks/Hooks";
+import { Hook, type HooksDefault } from "@blazyts/backend-lib/src/core/types/Hooks/Hooks";
 import { HooksCombiner } from "../../../src/utils/combine-hooks";
 
 describe("HooksCombiner", () => {
@@ -207,15 +207,15 @@ describe("HooksCombiner", () => {
         });
 
         it("should support async hooks", async () => {
-            const hook1: Hook<"asyncDouble", (x: number) => Promise<number>> = {
-                name: "asyncDouble",
-                handler: async (x) => x * 2
-            };
+            const hook1  = new Hook(
+                "asyncDouble",
+                 async (x) => x * 2
+            )
 
-            const hook2: Hook<"asyncAdd", (x: number) => Promise<number>> = {
-                name: "asyncAdd",
-                handler: async (x) => x + 20
-            };
+            const hook2: Hook = new Hook(
+                 "asyncAdd",
+                 async (x) => x + 20
+            );
 
             const combiner = HooksCombiner.new("asyncChain")
                 .addHook(hook1)

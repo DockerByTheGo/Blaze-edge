@@ -11,6 +11,9 @@ export interface ICrudified<Name extends string>{
    getAll: <R>() => R 
 }
 
+
+export type HandlerProtocol = 'POST' | 'GET' | 'PUT' | 'DELETE' | 'PATCH' | 'ws' | 'http';
+
 function CrudifyStrict<Name extends string, Model>(
     name: Name,
     model: Model,

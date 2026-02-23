@@ -1,23 +1,21 @@
 import { describe, it, expect } from "bun:test";
 import { Blazy } from "../../src/core";
-import { Message } from "../../src/route-handlers/variations/websocket/types";
 import z from "zod/v4";
+import { Message } from "../../src/route-handlers/variations/websocket/types";
 
-describe("WebSocket handler test", () => {
+describe("WS handler test", () => {
   it("should call the handler function when message is received", async () => {
     let handlerCalled = false;
     let receivedData: any = null;
 
-    // Create app with WebSocket route
-    const app = Blazy.create().websocket({
+    // Create app with WS route
+    const app = Blazy.create().ws({
       path: "/test",
       messages: {
         messagesItCanRecieve: {
           ping: new Message(
             z.object({ message: z.string() }),
             (data) => {
-              console.log("=== HANDLER CALLED ===");
-              console.log("Received data:", data);
               handlerCalled = true;
               receivedData = data;
             }

@@ -17,20 +17,44 @@ const isRouteHandler = (value: any): value is IRouteHandler<Request, any> => {
 };
 
 /**
+ * Checks if a value is a protocol handlers object (contains protocol keys like POST, GET, ws)
+ */
+const isProtocolHandlers = (value: any): boolean => {
+    if (!value || typeof value !== "object") return false;
+    // Check if it contains protocol keys
+    const protocols = ['POST', 'GET', 'PUT', 'DELETE', 'PATCH', 'ws', 'http'];
+    return Object.keys(value).some(key => protocols.includes(key));
+};
+
+/**
  * Tree-based route finder that:
- * 1. Traverses the route tree structure
+ * 1. Traverses the route tree structure to find the path
  * 2. Distinguishes between static and dynamic routes
  * 3. Prefers static (hardcoded) routes over dynamic routes when both exist
- * 4. Handlers are stored under "/" key instead of directly in the node
+ * 4. At the end of the path, looks for "/" key containing protocol handlers
+ * 5. Returns the protocol handlers object
  * 
  * Example structure:
  * {
  *   users: {
- *     "/": usersListHandler,        // Handler for /users
- *     admin: adminHandler,           // Handler for /users/admin
+ *     "/": {
+ *       "POST": usersListHandler,    // Handler for POST /users
+ *       "GET": usersListHandler      // Handler for GET /users
+ *     },
+ *     admin: {
+ *       "/": {
+ *         "GET": adminHandler        // Handler for GET /users/admin
+ *       }
+ *     },
  *     ":id": {
- *       "/": userByIdHandler,        // Handler for /users/:id
- *       posts: userPostsHandler      // Handler for /users/:id/posts
+ *       "/": {
+ *         "GET": userByIdHandler     // Handler for GET /users/:id
+ *       },
+ *       posts: {
+ *         "/": {
+ *           "GET": userPostsHandler  // Handler for GET /users/:id/posts
+ *         }
+ *       }
  *     }
  *   }
  * }
@@ -38,20 +62,24 @@ const isRouteHandler = (value: any): value is IRouteHandler<Request, any> => {
 export const treeRouteFinder: RouteFinder<RouteTree> = (routesTree, path) => {
     const pathParts = path.parts.map(part => part.part);
     /**
-     * Recursively traverse the route tree
+     * Recursively traverse the route tree to find the path endpoint
      * @param currentNode - Current node in the route tree
      * @param remainingParts - Remaining path segments to match
-     * @returns The route handler if found, or null
+     * @returns The protocol handlers object if found, or null
      */
     const traverse = (
         currentNode: RouteTree,
         remainingParts: string[]
-    ): Optionable<IRouteHandler<Request, any>> => {
-        // If no more parts to match, check if current node has a "/" handler
+    ): Optionable<any> => {
+        // If no more parts to match, check if current node has a "/" with protocol handlers
         if (remainingParts.length === 0) {
-            const rootHandler = currentNode["/"];
-            if (rootHandler && isRouteHandler(rootHandler)) {
-                return Optionable.some(rootHandler);
+            const protocolHandlers = currentNode["/"];
+            if (protocolHandlers && isProtocolHandlers(protocolHandlers)) {
+                return Optionable.some(protocolHandlers);
+            }
+            // Fallback: if "/" contains a single handler (old structure), return it
+            if (protocolHandlers && isRouteHandler(protocolHandlers)) {
+                return Optionable.some(protocolHandlers);
             }
             return Optionable.none();
         }
