@@ -53,5 +53,3 @@ export class NormalRouteHandler<
 // // Example usage of the decorator
 export const EnhancedNormalRouteHandler = withStaticNew(NormalRouteHandler);
 
-// // Now you can use the static new method
-const handler = EnhancedNormalRouteHandler.new((req) => ({ body: { result: "success" } }));

@@ -28,8 +28,6 @@ const names = ["date", "number"] as const;
     : Optionable.none();
 }
 
-getParamType()
-
 export class DSLRouting<TRoute extends string> implements RouteMAtcher<ExtractParams<TRoute>> {
   constructor(public readonly matcher: TRoute) {
 

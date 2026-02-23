@@ -9,13 +9,10 @@ describe("e2e simple app", () => {
     try {
       const client = app.createClient().createClient()("http://localhost:" + port);
       
-      // Test HTTP POST endpoint with new protocol structure
       const httpReq = await (await client.routes.jiji.koko["/"].POST({ koko: "" })).json();
       
-      // Test WebSocket endpoint with new protocol structure
       await client.routes.rooms["/"].ws.send.join({ name: "test-user" });
       
-      // Wait for message to be processed
       await new Promise(resolve => setTimeout(resolve, 1000));
       console.log("Test completed");
     } finally {

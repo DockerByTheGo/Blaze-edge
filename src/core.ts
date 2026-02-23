@@ -14,9 +14,9 @@ import z from "zod/v4";
 import { CleintBuilderConstructors, ClientBuilder } from "./client/client-builder/clientBuilder";
 import { RequestObjectHelper } from "@blazyts/backend-lib/src/core/utils/RequestObjectHelper";
 import type { IRouteHandler, RouteFinder } from "@blazyts/backend-lib/src/core/server";
-import type { ClientObject } from "./client/Client";
 import type { HandlerProtocol } from "./types";
 import { WebsocketRouteHandler } from "./route-handlers/variations/websocket";
+import { AuthService } from "./pluings/auth";
 
 type EmptyHooks = ReturnType<typeof Hooks.empty>
 
@@ -35,10 +35,15 @@ export class Blazy<
   onShutdown: EmptyHooks
 
 }, TRouterTree> {
+  public readonly services: Record<string, unknown>;
+
   static create(): Blazy<{}, {}> {
     return new Blazy({
       beforeHandler: Hooks.empty(),
-      afterHandler: Hooks.empty()
+      afterHandler: Hooks.empty(),
+      onError: Hooks.empty(),
+      onStartup: Hooks.empty(),
+      onShutdown: Hooks.empty(),
 
     }, {} as any, undefined as any);
   }
@@ -46,16 +51,25 @@ export class Blazy<
    * Creates a new instance of Blazy.
    * Initializes with a cache service.
    */
-  constructor(routerHooks?: THooks, routes?: TRouterTree, routeFinder?: RouteFinder<any>) {
+  constructor(
+    routerHooks?: THooks,
+    routes?: TRouterTree,
+    routeFinder?: RouteFinder<any>,
+    services?: Record<string, unknown>,
+  ) {
     // const cache = new Cache();
     super(
       routerHooks ?? {
         beforeHandler: Hooks.empty(),
         afterHandler: Hooks.empty(),
+        onError: Hooks.empty(),
+        onStartup: Hooks.empty(),
+        onShutdown: Hooks.empty(),
       },
       routes ?? {},
       routeFinder ?? treeRouteFinder
     );
+    this.services = services ?? {};
     // this.addService("name", cache);
   }
 
@@ -120,7 +134,7 @@ export class Blazy<
     const protocol = v.protocol || 'http';
     current["/"][protocol] = modifiedHandler;
 
-    return new Blazy(this.routerHooks, newRoutes, this.routeFinder) as unknown as Blazy<
+    return new Blazy(this.routerHooks, newRoutes, this.routeFinder, this.services) as unknown as Blazy<
       TRouterTree &
       PathStringToObject<
         TPath,
@@ -136,29 +150,80 @@ export class Blazy<
    * @param name - The name of the service.
    * @param v - The service object containing functions.
    */
-  addService(name: string, v: Record<string, (value: any) => any>) {
-    this.hook((v) => {
-      return {
-        ...v,
-        [name]: createSubscribeable(v),
-      };
-    });
+  addService<TService>(name: string, v: TService): this {
+    this.services[name] = v;
+    return this;
+  }
+
+  getService<TService = unknown>(name: string): TService | undefined {
+    return this.services[name] as TService | undefined;
   }
 
   /**
    * Sets up authentication for the application.
    * This method configures hooks for authentication.
    */
-  auth() {
+  auth(config?: {
+    serviceName?: string;
+    service?: AuthService<any>;
+    attachAs?: string;
+    hookName?: string;
+    allow?: (req: any) => boolean;
+    getAuthorizationHeader?: (req: any) => string | undefined;
+  }): this {
+    const serviceName = config?.serviceName ?? "auth";
+    const attachAs = config?.attachAs ?? "auth";
+    const hookName = config?.hookName ?? "auth";
 
+    if (config?.service) {
+      this.addService(serviceName, config.service);
+    }
+
+    this.beforeHandler({
+      name: hookName,
+      handler: (req: any) => {
+        if (config?.allow?.(req)) {
+          return req;
+        }
+
+        const authService = config?.service ?? this.getService<AuthService<any>>(serviceName);
+        if (!authService) {
+          throw new Error(`Auth service '${serviceName}' is not registered`);
+        }
+
+        const authHeader =
+          config?.getAuthorizationHeader?.(req)
+          ?? req?.headers?.authorization
+          ?? req?.headers?.Authorization;
+
+        const session = authService.fromAuthorizationHeader(authHeader);
+        if (!session) {
+          throw new Error("Unauthorized");
+        }
+
+        return {
+          ...req,
+          [attachAs]: session.user,
+          authSession: session,
+        };
+      },
+    });
+    return this;
   } // sets a  guard hook for authentication 
 
   /**
    * Sets up pre-authentication logic.
    * This method configures hooks that run before authentication.
    */
-  beforeAuth() {
-
+  beforeAuth<TName extends string>(
+    name: TName,
+    handler: (req: THooks["beforeHandler"]["TGetLastHookReturnType"]) => THooks["beforeHandler"]["TGetLastHookReturnType"],
+  ): this {
+    this.beforeHandler({
+      name,
+      handler: handler as any,
+    });
+    return this;
   }
 
 
@@ -416,10 +481,7 @@ export class Blazy<
     TName extends string,
     TFunc extends IFunc<TName, any, any>,
   >(name: TName, func: TFunc): this {
-    return this.addRoute({
-      routeMatcher: new NormalRouting(),
-      handler: new FunctionRouteHandler(func)
-    })
+    return this.rpcFromFunction(name, func);
   }
 
   /**
@@ -445,12 +507,27 @@ export class Blazy<
   /*
     json rpc version of routify
   */
-  rpcRoutify()
+  rpcRoutify<T extends Record<string, IFunc<string, any, any>>>(funcs: T): this {
+    return objectEntries(funcs).reduce(
+      (app, [name, func]) => app.rpcFromFunction(name as string, func),
+      this as this,
+    );
+  }
 
   /*
   exposes a JSON RPC standard abiding the JSON rpc spec input and output, that is different from fromFunction which turns it into REST instead 
   */
-  rpcFromFunction() { }
+  rpcFromFunction<
+    TName extends string,
+    TFunc extends IFunc<TName, any, any>,
+  >(name: TName, func: TFunc): this {
+    const subRoute = `/rpc/${name}`;
+    return this.addRoute({
+      routeMatcher: new NormalRouting(subRoute),
+      handler: new FunctionRouteHandler(func, subRoute),
+      protocol: "POST",
+    }) as this;
+  }
 
   /* proppiatary handler aims to achieve a mixture of good performace while still maintaing safety  
   
@@ -533,7 +610,7 @@ export class Blazy<
             try { const text = await req.text(); if (text) body = { text }; } catch { body = {} }
           }
 
-          const res = this.route({ url: req.url, body, verb: req.method });
+          const res = this.route({ url: req.url, body, verb: req.method, headers });
 
           // If router returned a native Response, forward it. Otherwise try to coerce.
           if (res instanceof Response) return res;
