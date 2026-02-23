@@ -15,17 +15,20 @@ function match<T extends string>(schema: T, config: { [K in T]: (v: K) => void }
 
 
 const types = [{ date: "(" }, { number: "$" }];
+export type paramTypes = typeof types;
 
-function getParamType(s: ("(" | "$") & {}): Optionable<"date" | "number"> {
-  s.length > 1 && panic("only one char accecpted");
 
-  const symbols = [...types.map(v => v.date || v.number)];
-  const names = [...types.map(v => v.date ? "date" : "number")];
+function getParamType(s: string): Optionable<keyof paramTypes[number]> {
 
+const symbols = ["(", "$"] as const;
+const names = ["date", "number"] as const;
+  if (symbols.includes(s as any))
   return symbols.includes(s)
     ? Optionable.some(names[symbols.indexOf(s)])
     : Optionable.none();
 }
+
+getParamType()
 
 export class DSLRouting<TRoute extends string> implements RouteMAtcher<ExtractParams<TRoute>> {
   constructor(public readonly matcher: TRoute) {
@@ -50,8 +53,10 @@ export class DSLRouting<TRoute extends string> implements RouteMAtcher<ExtractPa
       if (IsDynamic(currentMatcherPart)) {
         const paramName = currentMatcherPart.slice(1, currentMatcherPart.length - 1);
         const ParamType = getParamType(currentMatcherPart[currentMatcherPart.length - 1]);
+        console.log("param type", ParamType, currentRoutePart)
 
-        const conversionFailed = ParamType.try({
+        ParamType
+        .try({
           ifNone: () => {
             g[paramName] = currentRoutePart as string;
             return false;
@@ -66,19 +71,19 @@ export class DSLRouting<TRoute extends string> implements RouteMAtcher<ExtractPa
                 g[paramName] = date;
                 return false;
               case "number":
+                console.log("fjrijfir")
                 const num = Number.parseInt(currentRoutePart);
                 if (isNaN(num)) {
+                  console.log("fff")
                   return true;
                 }
                 g[paramName] = num;
+                console.log("dede")
                 return false;
             }
           },
-        });
-
-        if (conversionFailed) {
-          return Optionable.none();
-        }
+        })
+        .map(conversionFailed => conversionFailed ?? Optionable.none())
       }
       else {
         if (currentMatcherPart === currentRoutePart) {
@@ -90,6 +95,6 @@ export class DSLRouting<TRoute extends string> implements RouteMAtcher<ExtractPa
       }
     }
 
-    return new Optionable(g);
+    return Optionable.some(g);
   }
 }
