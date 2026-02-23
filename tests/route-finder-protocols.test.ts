@@ -49,7 +49,7 @@ describe("Tree Route Finder with Protocols", () => {
     console.log("kook", result)
     expect(result.isSome()).toBe(true);
     const handlers = result.unpack().valueOf();
-    expect(handlers.websocket).toBeDefined();
+    expect(handlers.ws).toBeDefined();
     console.log("✓ Found websocket protocol handler for /chat");
   });
 
@@ -71,7 +71,7 @@ describe("Tree Route Finder with Protocols", () => {
     const result = treeRouteFinder(routes, path);
 
     expect(result.isSome()).toBe(true);
-    const handlers = result.unpack();
+    const handlers = result.unpack().valueOf() as any;
     expect(handlers.GET).toBeDefined();
     expect(handlers.DELETE).toBeDefined();
     console.log("✓ Found protocol handlers in dynamic route /api/users/:id");
@@ -97,8 +97,8 @@ describe("Tree Route Finder with Protocols", () => {
     const result = treeRouteFinder(routes, path);
 
     expect(result.isSome()).toBe(true);
-    const handlers = result.unpack().valueOf();
-    const response = handlers.GET.handleRequest({});
+    const handlers = result.unpack().valueOf() as any;
+    const response = handlers.GET?.handleRequest({});
     expect(response).toBe("admin user");
     console.log("✓ Correctly preferred static route over dynamic");
   });
@@ -145,7 +145,7 @@ describe("Tree Route Finder with Protocols", () => {
     const result = treeRouteFinder(routes, path);
 
     expect(result.isSome()).toBe(true);
-    const handlers = result.unpack();
+    const handlers = result.unpack().valueOf() as any;
     expect(handlers.GET).toBeDefined();
     expect(handlers.PUT).toBeDefined();
     console.log("✓ Found protocol handlers in deeply nested route");
