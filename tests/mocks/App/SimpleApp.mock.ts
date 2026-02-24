@@ -24,5 +24,8 @@ export const app = Blazy
     .post({
         path: "/jiji",
         handeler: v => v,
-        args: z.object({ v: z.string() })
+        args: z.object({ v: z.string() }),
+        cache: {
+            ttl: 2
+        }
     })

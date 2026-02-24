@@ -19,9 +19,11 @@ import { WebsocketRouteHandler } from "./route-handlers/variations/websocket";
 import { AuthService } from "./pluings/auth";
 import { AuthProvider, AuthVerificationResult, createLocalSessionProvider } from "./pluings/auth/providers";
 import { ServiceManager } from "./service-manager";
-import { FileSavingService } from "./services";
+import { FileSavingService, CacheService, type CacheHandlerConfig } from "./services";
 import { normalizeFileRoute } from "./route-handlers/variations/fileUtils";
+import { ConsoleLogSaver, LoggerService } from "./pluings/logger";
 const FILE_SAVER_SERVICE_NAME = "fileSaver";
+const CACHE_SERVICE_NAME = "cache";
 
 type EmptyHooks = ReturnType<typeof Hooks.empty>
 
@@ -40,7 +42,7 @@ export class Blazy<
   onShutdown: EmptyHooks
 
 }, TRouterTree> {
-  public readonly services: ServiceManager;
+  public services: ServiceManager;
   public readonly ctx: { services: ServiceManager };
 
   static create(): Blazy<{}, {}> {
@@ -51,7 +53,11 @@ export class Blazy<
       onStartup: Hooks.empty(),
       onShutdown: Hooks.empty(),
 
-    }, {} as any, undefined as any);
+    }, {} as any)
+    // .addService(CACHE_SERVICE_NAME, new CacheService())
+    // .addService(FILE_SAVER_SERVICE_NAME, new FileSavingService())
+    // .addService("logger", new LoggerService(new ConsoleLogSaver()))
+    // .beforeRequestHandler("log", ctx => )
   }
   /**
    * Creates a new instance of Blazy.
@@ -83,6 +89,9 @@ export class Blazy<
   private ensureDefaultServices(): void {
     if (!this.services.hasService(FILE_SAVER_SERVICE_NAME)) {
       this.services.addService(FILE_SAVER_SERVICE_NAME, new FileSavingService());
+    }
+    if (!this.services.hasService(CACHE_SERVICE_NAME)) {
+      this.services.addService(CACHE_SERVICE_NAME, new CacheService());
     }
   }
 
@@ -163,9 +172,9 @@ export class Blazy<
    * @param name - The name of the service.
    * @param v - The service object containing functions.
    */
-  addService<TService>(name: string, v: TService): this {
+  addService<TService>(name: string, v: TService) {
     this.services.addService(name, v);
-    return this;
+    return this.beforeRequestHandler(`attach service ${name}`, ctx => ({ ...ctx, services: this.services as ServiceManager<typeof this.services.services & Record<string, TService>> }));
   }
 
   getService<TService = unknown>(name: string): TService | undefined {
@@ -255,7 +264,9 @@ export class Blazy<
   }
 
 
-  beforeRequestHandler<TReturn, TName extends string>(
+  beforeRequestHandler<
+  TReturn,
+  TName extends string>(
     name: TName,
     func: (arg: THooks["beforeHandler"]["TGetLastHookReturnType"]) => TReturn
   ): Blazy<
@@ -394,7 +405,10 @@ export class Blazy<
     path: TPath,
     handler: Thandler,
     args?: Args,
-    meta?: URecord & { protocol?: TProtocol }
+    meta?: URecord & { protocol?: TProtocol },
+    cache?: CacheHandlerConfig<
+      Parameters<Thandler>[0] extends URecord ? Parameters<Thandler>[0] : URecord
+    >
   }): Blazy<
     TRouterTree &
     PathStringToObject<
@@ -407,24 +421,61 @@ export class Blazy<
     >,
     THooks
   > {
-    const metadata = { subRoute: v.path, ...v.meta }
+    const metadata = { subRoute: v.path, ...v.meta };
+    const protocol = (v.meta?.protocol as TProtocol) || ('http' as TProtocol);
+    const cacheService = this.services.getService<CacheService>(CACHE_SERVICE_NAME);
+    type HandlerArg = Parameters<Thandler>[0] extends URecord ? Parameters<Thandler>[0] : URecord;
+    const cacheConfig = v.cache;
+    const handlerId = `${protocol}:${metadata.subRoute}`;
+    const shouldUseCache = Boolean(cacheService && cacheConfig && protocol !== "ws");
+    const buildCacheKey = (value: HandlerArg) => {
+      if (cacheConfig?.key) {
+        return cacheConfig.key(value);
+      }
+
+      try {
+        return JSON.stringify(value);
+      } catch {
+        return String(value);
+      }
+    };
+
+    const executeHandler = (value: HandlerArg) => {
+      if (!shouldUseCache || !cacheService || !cacheConfig) {
+        return v.handler(value);
+      }
+
+      const key = buildCacheKey(value);
+      if (cacheService.hasEntry(handlerId, key)) {
+        return cacheService.getEntry(handlerId, key) as ReturnType<Thandler>;
+      }
+
+      const result = v.handler(value);
+      cacheService.setEntry(handlerId, key, result, cacheConfig.ttl);
+      return result;
+    };
+
+    const handlerFn = (arg: Parameters<Thandler>[0]) => {
+      if (v.args) {
+        const res = v.args.safeParse(arg);
+        if (!res.success) {
+          return res.error;
+        }
+        return executeHandler(res.data as HandlerArg) as ReturnType<Thandler>;
+      }
+      return executeHandler(arg as HandlerArg) as ReturnType<Thandler>;
+    };
+
+    const finalHandler = new NormalRouteHandler(handlerFn, metadata);
+    if (shouldUseCache && cacheService) {
+      cacheService.registerHandler(handlerId, finalHandler);
+    }
+
     return this.addRoute({
       routeMatcher: new DSLRouting(v.path),
-      protocol: (v.meta?.protocol as TProtocol) || ('http' as TProtocol),
-      // the checking of definition of args could be done using a single normal routing handler and oing the check inside but this would hurt performace a bit and yeah we are missing the forst for the trees given the awful performace of the framework but its so easy to do it here 
-      handler: (v.args)
-        ? new NormalRouteHandler(arg => {
-          const res = v.args.safeParse(arg)
-
-          if (res.success) {
-            return v.handler(res.data)
-          }
-
-          return res.error
-
-        }, metadata)
-        : new NormalRouteHandler(a => v.handler(a), metadata)
-    })
+      protocol,
+      handler: finalHandler,
+    });
   }
 
 
@@ -438,7 +489,7 @@ export class Blazy<
     THandler extends (arg: (TArgs extends undefined ? URecord : z.infer<TArgs>) & ExtractParams<TPath>) => unknown,
     TArgs extends z.ZodObject | undefined,
     TPath extends string,
-  >(config: { path: TPath, handeler: THandler, args?: TArgs }): Blazy<
+  >(config: { path: TPath, handeler: THandler, args?: TArgs, cache?: CacheHandlerConfig<Parameters<THandler>[0]> }): Blazy<
     TRouterTree &
     PathStringToObject<
       TPath,
@@ -450,11 +501,12 @@ export class Blazy<
     >,
     THooks
   > {
-
+    (this.ctx.services.services.cache as CacheService).registerHandler(`POST:${config.path}`, new NormalRouteHandler(config.handeler, { subRoute: config.path, verb: "POST", protocol: "POST" }))
     return this.http<TPath, THandler, any, 'POST'>({
       path: config.path,
       handler: v => config.handeler(v),
-      meta: { verb: "POST", protocol: "POST" as const }
+      meta: { verb: "POST", protocol: "POST" as const },
+      cache: config.cache,
     })
 
   }
@@ -482,7 +534,8 @@ export class Blazy<
   >(config: {
     path: TPath,
     handler: THandler,
-    args: TArgs
+    args: TArgs,
+    cache?: CacheHandlerConfig<Parameters<THandler>[0]>
   }): Blazy<
     TRouterTree &
     PathStringToObject<
@@ -500,7 +553,8 @@ export class Blazy<
       path: config.path,
       handler: v => v.path === "GET" ? config.handler(v) : this.notFound(),
       args: config.args,
-      meta: { verb: "GET", protocol: "GET" as const }
+      meta: { verb: "GET", protocol: "GET" as const },
+      cache: config.cache,
     })
 
   }
@@ -648,7 +702,8 @@ export class Blazy<
             try { const text = await req.text(); if (text) body = { text }; } catch { body = {} }
           }
 
-          const res = this.route({ url: req.url, body, verb: req.method, headers });
+          console.log("d", )
+          const res = this.route({ url: req.url,protocol: req.method, body, verb: req.method, headers});
 
           // If router returned a native Response, forward it. Otherwise try to coerce.
           if (res instanceof Response) return res;
