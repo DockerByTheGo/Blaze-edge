@@ -55,7 +55,7 @@ describe("WebsocketRouteHandler (bun)", () => {
     it("registers a ws handler when using Blazy.ws", () => {
         const pingSchema = z.object({ text: z.string() });
         const app = Blazy
-        .create()
+        .createEmpty()
         .ws({
             path: "/chat",
             messages: {

@@ -4,11 +4,11 @@ import { Message } from "../../../src/route-handlers/variations/websocket/types"
 
 export const app = Blazy
     .createProd()
-    // .http({
-    //     path: "/koko",
-    //     handler: v => v,
-    //     args: z.object({ v: z.string() })
-    // })
+    .http({
+        path: "/koko",
+        handler: v => v,
+        args: z.object({ v: z.string() })
+    })
     .post({
         path: "/jiji/koko",
         handeler: v => {
@@ -16,11 +16,11 @@ export const app = Blazy
         },
         args: z.object({ koko: z.string() })
     })
-    // .post({
-    //     path: "/jiji/pllp",
-    //     handeler: v => v,
-    //     args: z.object({})
-    // })
+    .post({
+        path: "/jiji/pllp",
+        handeler: v => v,
+        args: z.object({})
+    })
     .post({
         path: "/jiji",
         handeler: v => v,

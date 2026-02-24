@@ -45,7 +45,7 @@ export class Blazy<
   public services: ServiceManager;
   public readonly ctx: { services: ServiceManager };
 
-  static createEmpty(){
+  static createEmpty(): Blazy<{}, {}> {
     return new Blazy({
       beforeHandler: Hooks.empty(),
       afterHandler: Hooks.empty(),
@@ -614,13 +614,31 @@ export class Blazy<
     );
   }
 
+  rpc<
+  TName extends string,
+   THandlerReturn,
+   TArgs extends z.ZodObject | undefined,
+   >(v: {
+    name: TName,
+    handler: (arg: (TArgs extends undefined ? URecord : z.infer<TArgs>) ) => THandlerReturn,
+    args?: TArgs
+  })
+   {
+    return this.post({
+      path: `/rpc/${v.name}`,
+      handeler: v.handler,
+      args: v.args,
+      meta: { protocol: "POST", verb: "POST" },
+    })
+  }
+
   /*
   exposes a JSON RPC standard abiding the JSON rpc spec input and output, that is different from fromFunction which turns it into REST instead 
   */
   rpcFromFunction<
     TName extends string,
     TFunc extends IFunc<TName, any, any>,
-  >(name: TName, func: TFunc): this {
+  >(name: TName, func: TFunc) {
     const subRoute = `/rpc/${name}`;
     return this.post({
       handeler: (ctx: { body?: Parameters<TFunc["execute"]>[0] }) => {
@@ -642,13 +660,13 @@ export class Blazy<
   }
 
 
-  requestResponseWebsocket<
-    TPath extends string,
-    TSchema extends z.ZodObject
-  >(v: {
-    path: TPath,
-    TS
-  })
+  // requestResponseWebsocket<
+  //   TPath extends string,
+  //   TSchema extends z.ZodObject
+  // >(v: {
+  //   path: TPath,
+  //   TS
+  // })
 
   ws<
     TPath extends string,

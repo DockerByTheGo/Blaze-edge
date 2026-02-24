@@ -1,8 +1,7 @@
+import { Path } from "@blazyts/backend-lib/src/core/server";
+import { Blazy } from "@src/core";
+import { treeRouteFinder } from "@src/route-finders";
 import { describe, expect, test } from "bun:test";
-import { Blazy } from "../../src/core";
-import { Path } from "@blazyts/backend-lib/src/core/server/router/utils/path/Path";
-import { treeRouteFinder } from "../../src/route-finders";
-
 describe("RPC routes", () => {
   test("rpcFromFunction registers POST /rpc/{providedName}", () => {
     const receivedArgs: unknown[] = [];
@@ -16,7 +15,7 @@ describe("RPC routes", () => {
       },
     };
 
-    const app = Blazy.create().rpcFromFunction("publicRoute", rpcFunc);
+    const app = Blazy.createEmpty().rpcFromFunction("publicRoute", rpcFunc);
 
     const handlerByPath = treeRouteFinder(app.routes, new Path("/rpc/publicRoute"))
       .expect("RPC route should exist at /rpc/publicRoute")
@@ -51,13 +50,18 @@ describe("RPC routes", () => {
         return { body: { ok: true, name: "deleteUser" } };
       },
     };
-
+    let isCustomRouteCalled = false;
     const app = Blazy
-    .create()
+    .createProd()
     .rpcRoutify({
       addUser: addUserFunc,
       deleteUser: deleteUserFunc,
-    });
+    })
+    .rpc({name: "customRoute", handler: () => { isCustomRouteCalled = true }})
+
+
+    const client = app.createClient().createClient()("http://localhost:3000");
+    client.routes.rpc.customRoute["/"].POST({})
 
     const addUserHandler = treeRouteFinder(app.routes, new Path("/rpc/addUser"))
       .expect("Route /rpc/addUser should exist")
@@ -73,5 +77,6 @@ describe("RPC routes", () => {
       body: { ok: true, name: "deleteUser" },
     });
     expect(calls).toEqual(["addUser", "deleteUser"]);
+    expect(isCustomRouteCalled).toBe(false);
   });
 });
