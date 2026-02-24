@@ -2,6 +2,8 @@ import { describe, it, expect } from "bun:test";
 import { app } from "./server";
 import { LoggerService } from "@src/pluings/logger/LoggerService";
 import { ConsoleLogSaver } from "@src/pluings/logger/savers/ConsoleLogSaver";
+import { tap } from "@src/hooks";
+import { AuthService } from "@src/pluings/auth";
 
 describe("e2e simple app", () => {
   it("responds to POST /jiji/koko and WebSocket /rooms", async () => {
@@ -10,13 +12,12 @@ describe("e2e simple app", () => {
 
     try {
       const client = app
-      .beforeRequestHandler("attach", ctx => ({...ctx, services: {}})) 
-      .beforeRequestHandler("koko", ctx => ({...ctx, services: new LoggerService(new ConsoleLogSaver())}))
+      .beforeRequestHandler("provide user", ctx => ({...ctx, user: ctx.services.auth.getUserId(ctx.token)}))
       .beforeRequestHandler("log", ctx => {
-        ctx.services.logRequest(ctx)
-        
-        
-        return ctx})
+        ctx.services.logger.logFromClientHandler(ctx.reqData)
+        console.log("gg",ctx) 
+        return ctx
+      })
         .createClient()
         .createClient()("http://localhost:" + port);
       

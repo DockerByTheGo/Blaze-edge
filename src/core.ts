@@ -45,7 +45,7 @@ export class Blazy<
   public services: ServiceManager;
   public readonly ctx: { services: ServiceManager };
 
-  static create(): Blazy<{}, {}> {
+  static createEmpty(){
     return new Blazy({
       beforeHandler: Hooks.empty(),
       afterHandler: Hooks.empty(),
@@ -59,6 +59,16 @@ export class Blazy<
     // .addService("logger", new LoggerService(new ConsoleLogSaver()))
     // .beforeRequestHandler("log", ctx => )
   }
+
+  static createProd() {
+    return Blazy
+      .createEmpty()
+      .beforeRequestHandler("attach", ctx => ({...ctx, services: {}})) 
+      .beforeRequestHandler("add logger service", ctx => ({...ctx, services: {...ctx.services, logger: new LoggerService(new ConsoleLogSaver())}}))
+      .beforeRequestHandler("add auth service", ctx => ({...ctx, services: {...ctx.services, auth: new AuthService()}}))
+      .beforeRequestHandler("add caching service", ctx => ({...ctx, services: {...ctx.services, cache: new CacheService()}}))
+  }
+
   /**
    * Creates a new instance of Blazy.
    * Initializes with a cache service.
@@ -702,8 +712,7 @@ export class Blazy<
             try { const text = await req.text(); if (text) body = { text }; } catch { body = {} }
           }
 
-          console.log("d", )
-          const res = this.route({ url: req.url,protocol: req.method, body, verb: req.method, headers});
+          const res = this.route({ reqData:{url: req.url,protocol: req.method, body, verb: req.method, headers}});
 
           // If router returned a native Response, forward it. Otherwise try to coerce.
           if (res instanceof Response) return res;

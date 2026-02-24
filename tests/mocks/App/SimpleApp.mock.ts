@@ -3,7 +3,7 @@ import { Blazy } from "../../../src/core";
 import { Message } from "../../../src/route-handlers/variations/websocket/types";
 
 export const app = Blazy
-    .create()
+    .createProd()
     // .http({
     //     path: "/koko",
     //     handler: v => v,
