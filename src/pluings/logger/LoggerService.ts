@@ -72,10 +72,14 @@ export class LoggerService {
       protocol: 'http',
       path: data.path,
       method: data.method,
-      requestData: data.requestBody,
-      responseData: data.responseBody,
-      statusCode: data.statusCode,
-      headers: data.headers,
+      request: {
+        data: data.requestBody,
+        headers: data.headers,
+      },
+      response: {
+        data: data.responseBody,
+        statusCode: data.statusCode,
+      },
       startTime: Date.now() - data.responseTime,
       endTime: Date.now(),
       error: data.error ? new Error(data.error) : undefined,

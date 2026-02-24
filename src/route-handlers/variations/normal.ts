@@ -34,17 +34,26 @@ export class NormalRouteHandler<
 
   }
 
-  getClientRepresentation: NormalRouteHandlerClientRepresentation<TCtx, TReturn> = (meta) => async v => {
+  getClientRepresentation: NormalRouteHandlerClientRepresentation<TCtx, TReturn> = (meta) => {
     const metadata: IRouteHandlerMetadata = {
       ...this.metadata,
       ...meta
-    }
+    };
 
+    const clientFn = async (v: TCtx) => {
+      return await fetch(metadata.serverUrl, {
+        method: metadata.verb,
+        body: JSON.stringify(v),
+      });
+    };
 
-    return await fetch(metadata.serverUrl, {
-      method: metadata.verb,
-      body: JSON.stringify(v)
-    })
+    Object.assign(clientFn, {
+      method: metadata.verb?.toLowerCase(),
+      path: meta.path ?? this.metadata.subRoute,
+      metadata,
+    });
+
+    return clientFn;
   }
 }
 
@@ -52,4 +61,3 @@ export class NormalRouteHandler<
 
 // // Example usage of the decorator
 export const EnhancedNormalRouteHandler = withStaticNew(NormalRouteHandler);
-

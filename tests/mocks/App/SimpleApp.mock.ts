@@ -3,12 +3,12 @@ import { Blazy } from "../../../src/core";
 import { Message } from "../../../src/route-handlers/variations/websocket/types";
 
 export const app = Blazy
-    .create()
-    // .http({
-    //     path: "/koko",
-    //     handler: v => v,
-    //     args: z.object({ v: z.string() })
-    // })
+    .createProd()
+    .http({
+        path: "/koko",
+        handler: v => v,
+        args: z.object({ v: z.string() })
+    })
     .post({
         path: "/jiji/koko",
         handeler: v => {
@@ -16,25 +16,16 @@ export const app = Blazy
         },
         args: z.object({ koko: z.string() })
     })
-    // .post({
-    //     path: "/jiji/pllp",
-    //     handeler: v => v,
-    //     args: z.object({})
-    // })
+    .post({
+        path: "/jiji/pllp",
+        handeler: v => v,
+        args: z.object({})
+    })
     .post({
         path: "/jiji",
         handeler: v => v,
-        args: z.object({ v: z.string() })
-    })
-    .ws({
-        path: "/rooms",
-        messages: {
-            messagesItCanRecieve: {
-                join: new Message(z.object({ name: z.string() }), v => console.log("recieved message", v))
-            },
-            messagesItCanSend: {
-                joined: new Message(z.object({ name: z.string() }), v => v.data.name)
-            }
-
+        args: z.object({ v: z.string() }),
+        cache: {
+            ttl: 2
         }
     })

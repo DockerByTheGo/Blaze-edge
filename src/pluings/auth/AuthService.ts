@@ -6,30 +6,27 @@ export type AuthSession<TUser extends AuthUser = AuthUser> = {
   expiresAt?: number;
 };
 
-export class AuthService<TUser extends AuthUser = AuthUser> {
-  private readonly sessions = new Map<string, AuthSession<TUser>>();
+export class AuthService {
+  private readonly sessions = new Map<string, AuthSession>();
 
-  createSession(token: string, user: TUser, options?: { ttlMs?: number }): AuthSession<TUser> {
-    const expiresAt = typeof options?.ttlMs === "number"
-      ? Date.now() + options.ttlMs
-      : undefined;
-
-    const session: AuthSession<TUser> = {
-      token,
-      user,
-      expiresAt,
-    };
-
+  issueNewToken(userId: string): string {
+    const token = this.generateToken();
+    const session: AuthSession = { token, user: { id: userId } };
     this.sessions.set(token, session);
-    return session;
+    return token;
   }
 
-  setSession(session: AuthSession<TUser>): AuthSession<TUser> {
-    this.sessions.set(session.token, session);
-    return session;
+  getUserId(token: string): Optionable<string> {
+    const session = this.verifyToken(token);
+    return session ? session.user.id : null;
   }
 
-  verifyToken(token: string): AuthSession<TUser> | null {
+  private generateToken(): string {
+    // Implement token generation logic here
+    return 'generated-token';
+  }
+
+  private verifyToken(token: string): AuthSession | null {
     const session = this.sessions.get(token);
     if (!session) {
       return null;
@@ -41,30 +38,5 @@ export class AuthService<TUser extends AuthUser = AuthUser> {
     }
 
     return session;
-  }
-
-  fromAuthorizationHeader(header?: string | null): AuthSession<TUser> | null {
-    if (!header) {
-      return null;
-    }
-
-    const [scheme, token] = header.trim().split(/\s+/, 2);
-    if (!scheme || !token || scheme.toLowerCase() !== "bearer") {
-      return null;
-    }
-
-    return this.verifyToken(token);
-  }
-
-  revoke(token: string): boolean {
-    return this.sessions.delete(token);
-  }
-
-  clear(): void {
-    this.sessions.clear();
-  }
-
-  getSessionCount(): number {
-    return this.sessions.size;
   }
 }
