@@ -51,7 +51,6 @@ export class DSLRouting<TRoute extends string> implements RouteMAtcher<ExtractPa
       if (IsDynamic(currentMatcherPart)) {
         const paramName = currentMatcherPart.slice(1, currentMatcherPart.length - 1);
         const ParamType = getParamType(currentMatcherPart[currentMatcherPart.length - 1]);
-        console.log("param type", ParamType, currentRoutePart)
 
         ParamType
         .try({

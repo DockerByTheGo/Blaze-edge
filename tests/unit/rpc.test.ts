@@ -52,7 +52,9 @@ describe("RPC routes", () => {
       },
     };
 
-    const app = Blazy.create().rpcRoutify({
+    const app = Blazy
+    .create()
+    .rpcRoutify({
       addUser: addUserFunc,
       deleteUser: deleteUserFunc,
     });

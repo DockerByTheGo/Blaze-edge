@@ -26,15 +26,3 @@ export const app = Blazy
         handeler: v => v,
         args: z.object({ v: z.string() })
     })
-    .ws({
-        path: "/rooms",
-        messages: {
-            messagesItCanRecieve: {
-                join: new Message(z.object({ name: z.string() }), v => console.log("recieved message", v))
-            },
-            messagesItCanSend: {
-                joined: new Message(z.object({ name: z.string() }), v => v.data.name)
-            }
-
-        }
-    })

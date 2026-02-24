@@ -17,6 +17,11 @@ import type { IRouteHandler, RouteFinder } from "@blazyts/backend-lib/src/core/s
 import type { HandlerProtocol } from "./types";
 import { WebsocketRouteHandler } from "./route-handlers/variations/websocket";
 import { AuthService } from "./pluings/auth";
+import { AuthProvider, AuthVerificationResult, createLocalSessionProvider } from "./pluings/auth/providers";
+import { ServiceManager } from "./service-manager";
+import { FileSavingService } from "./services";
+import { normalizeFileRoute } from "./route-handlers/variations/fileUtils";
+const FILE_SAVER_SERVICE_NAME = "fileSaver";
 
 type EmptyHooks = ReturnType<typeof Hooks.empty>
 
@@ -35,7 +40,8 @@ export class Blazy<
   onShutdown: EmptyHooks
 
 }, TRouterTree> {
-  public readonly services: Record<string, unknown>;
+  public readonly services: ServiceManager;
+  public readonly ctx: { services: ServiceManager };
 
   static create(): Blazy<{}, {}> {
     return new Blazy({
@@ -55,7 +61,7 @@ export class Blazy<
     routerHooks?: THooks,
     routes?: TRouterTree,
     routeFinder?: RouteFinder<any>,
-    services?: Record<string, unknown>,
+    services?: ServiceManager,
   ) {
     // const cache = new Cache();
     super(
@@ -69,8 +75,15 @@ export class Blazy<
       routes ?? {},
       routeFinder ?? treeRouteFinder
     );
-    this.services = services ?? {};
-    // this.addService("name", cache);
+    this.services = services ?? new ServiceManager();
+    this.ctx = { services: this.services };
+    this.ensureDefaultServices();
+  }
+
+  private ensureDefaultServices(): void {
+    if (!this.services.hasService(FILE_SAVER_SERVICE_NAME)) {
+      this.services.addService(FILE_SAVER_SERVICE_NAME, new FileSavingService());
+    }
   }
 
   /**
@@ -151,12 +164,12 @@ export class Blazy<
    * @param v - The service object containing functions.
    */
   addService<TService>(name: string, v: TService): this {
-    this.services[name] = v;
+    this.services.addService(name, v);
     return this;
   }
 
   getService<TService = unknown>(name: string): TService | undefined {
-    return this.services[name] as TService | undefined;
+    return this.services.getService<TService>(name);
   }
 
   /**
@@ -170,6 +183,7 @@ export class Blazy<
     hookName?: string;
     allow?: (req: any) => boolean;
     getAuthorizationHeader?: (req: any) => string | undefined;
+    providers?: AuthProvider[];
   }): this {
     const serviceName = config?.serviceName ?? "auth";
     const attachAs = config?.attachAs ?? "auth";
@@ -179,6 +193,17 @@ export class Blazy<
       this.addService(serviceName, config.service);
     }
 
+    const authService = config?.service ?? this.getService<AuthService<any>>(serviceName);
+    const providers = config?.providers ? [...config.providers] : [];
+
+    if (providers.length === 0) {
+      if (!authService) {
+        throw new Error("Auth service is missing, unable to create local session provider");
+      }
+
+      providers.push(createLocalSessionProvider(authService));
+    }
+
     this.beforeHandler({
       name: hookName,
       handler: (req: any) => {
@@ -186,25 +211,28 @@ export class Blazy<
           return req;
         }
 
-        const authService = config?.service ?? this.getService<AuthService<any>>(serviceName);
-        if (!authService) {
-          throw new Error(`Auth service '${serviceName}' is not registered`);
-        }
-
         const authHeader =
           config?.getAuthorizationHeader?.(req)
           ?? req?.headers?.authorization
           ?? req?.headers?.Authorization;
 
-        const session = authService.fromAuthorizationHeader(authHeader);
-        if (!session) {
+        let verificationResult: AuthVerificationResult | null = null;
+        for (const provider of providers) {
+          const result = provider.authenticate({ req, authorization: authHeader });
+          if (result) {
+            verificationResult = result;
+            break;
+          }
+        }
+
+        if (!verificationResult) {
           throw new Error("Unauthorized");
         }
 
         return {
           ...req,
-          [attachAs]: session.user,
-          authSession: session,
+          [attachAs]: verificationResult.identity,
+          authSession: verificationResult.raw ?? undefined,
         };
       },
     });
@@ -332,16 +360,28 @@ export class Blazy<
       }),
       hooks: {}
     });
-
-
-
   }
-  // by defaulkt it adds the name of the file as the path for example File("/hi.txt") -> /hi.txt
-  file<TPath extends string>(path: TPath, route?: string): this {// maybe use the builtin path strucutre
+
+  // by default it uses the file name (or provided route) as the exposed route
+  file<
+    TPath extends string
+  >(
+    filePath: string,
+    route?: TPath
+  ): Blazy<
+    TRouterTree & PathStringToObject<
+    TPath,
+     FileRouteHandler,
+     "static"
+     >,
+     THooks
+  > {
+    const normalizedRoute = normalizeFileRoute(route ?? filePath);
+
     return this.addRoute({
-      routeMatcher: new NormalRouting(`/static/${route ? route : path}}`),
-      handler: new FileRouteHandler(path),
-    })
+      routeMatcher: new NormalRouting(normalizedRoute),
+      handler: new FileRouteHandler(filePath, normalizedRoute),
+    });
   }
 
   http<
@@ -413,11 +453,7 @@ export class Blazy<
 
     return this.http<TPath, THandler, any, 'POST'>({
       path: config.path,
-      handler: v => {
-        if (v.verb?.indexOf("POST") > -1 && v.verb.length === 4)
-          return config.handeler(v)
-        return this.notFound()
-      },
+      handler: v => config.handeler(v),
       meta: { verb: "POST", protocol: "POST" as const }
     })
 
@@ -522,10 +558,12 @@ export class Blazy<
     TFunc extends IFunc<TName, any, any>,
   >(name: TName, func: TFunc): this {
     const subRoute = `/rpc/${name}`;
-    return this.addRoute({
-      routeMatcher: new NormalRouting(subRoute),
-      handler: new FunctionRouteHandler(func, subRoute),
-      protocol: "POST",
+    return this.post({
+      handeler: (ctx: { body?: Parameters<TFunc["execute"]>[0] }) => {
+        const args = ctx.body ?? ({} as Parameters<TFunc["execute"]>[0]);
+        return func.execute(args);
+      },
+      path: subRoute,
     }) as this;
   }
 
