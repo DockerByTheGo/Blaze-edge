@@ -43,9 +43,9 @@ export class Blazy<
 
 }, TRouterTree> {
   public services: ServiceManager;
-  public readonly ctx: { services: ServiceManager };
 
-  static createEmpty(): Blazy<{}, {}> {
+  static createEmpty(): Blazy<{},{
+  }> {
     return new Blazy({
       beforeHandler: Hooks.empty(),
       afterHandler: Hooks.empty(),
@@ -53,9 +53,9 @@ export class Blazy<
       onStartup: Hooks.empty(),
       onShutdown: Hooks.empty(),
 
-    }, {} as any)
+    }, {} as any, treeRouteFinder)
     // .addService(CACHE_SERVICE_NAME, new CacheService())
-    // .addService(FILE_SAVER_SERVICE_NAME, new FileSavingService())
+    .addService(FILE_SAVER_SERVICE_NAME, new FileSavingService())
     // .addService("logger", new LoggerService(new ConsoleLogSaver()))
     // .beforeRequestHandler("log", ctx => )
   }
@@ -63,7 +63,7 @@ export class Blazy<
   static createProd() {
     return Blazy
       .createEmpty()
-      .beforeRequestHandler("attach", ctx => ({...ctx, services: {}})) 
+      .beforeRequestHandler("attach", ctx => ({...ctx as URecord, services: {}})) 
       .beforeRequestHandler("add logger service", ctx => ({...ctx, services: {...ctx.services, logger: new LoggerService(new ConsoleLogSaver())}}))
       .beforeRequestHandler("add auth service", ctx => ({...ctx, services: {...ctx.services, auth: new AuthService()}}))
       .beforeRequestHandler("add caching service", ctx => ({...ctx, services: {...ctx.services, cache: new CacheService()}}))
@@ -74,24 +74,19 @@ export class Blazy<
    * Initializes with a cache service.
    */
   constructor(
-    routerHooks?: THooks,
-    routes?: TRouterTree,
-    routeFinder?: RouteFinder<any>,
-    services?: ServiceManager,
+    routerHooks: THooks,
+    routes: TRouterTree,
+    routeFinder: RouteFinder<any>
   ) {
     // const cache = new Cache();
     super(
-      routerHooks ?? {
-        beforeHandler: Hooks.empty(),
-        afterHandler: Hooks.empty(),
-        onError: Hooks.empty(),
-        onStartup: Hooks.empty(),
-        onShutdown: Hooks.empty(),
-      },
+routerHooks
+
+ ,
       routes ?? {},
       routeFinder ?? treeRouteFinder
     );
-    this.services = services ?? new ServiceManager();
+    this.services =  new ServiceManager();
     this.ctx = { services: this.services };
     this.ensureDefaultServices();
   }
@@ -278,7 +273,8 @@ export class Blazy<
   TReturn,
   TName extends string>(
     name: TName,
-    func: (arg: THooks["beforeHandler"]["TGetLastHookReturnType"]) => TReturn
+    func: (arg: THooks["beforeHandler"]["TGetLastHookReturnType"]) => TReturn,
+
   ): Blazy<
     TRouterTree,
     And<[
