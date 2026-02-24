@@ -13,7 +13,7 @@ import { treeRouteFinder } from "./route-finders";
 import z from "zod/v4";
 import { CleintBuilderConstructors, ClientBuilder } from "./client/client-builder/clientBuilder";
 import { RequestObjectHelper } from "@blazyts/backend-lib/src/core/utils/RequestObjectHelper";
-import type { IRouteHandler, RouteFinder } from "@blazyts/backend-lib/src/core/server";
+import type { IRouteHandler, RequestData, RouteFinder } from "@blazyts/backend-lib/src/core/server";
 import type { HandlerProtocol } from "./types";
 import { WebsocketRouteHandler } from "./route-handlers/variations/websocket";
 import { AuthService } from "./pluings/auth";
@@ -63,7 +63,7 @@ export class Blazy<
   static createProd() {
     return Blazy
       .createEmpty()
-      .beforeRequestHandler("attach", ctx => ({...ctx as URecord, services: {}})) 
+      .beforeRequestHandler("attach", ctx => ({...ctx as {reqData: RequestData}, services: {}})) 
       .beforeRequestHandler("add logger service", ctx => ({...ctx, services: {...ctx.services, logger: new LoggerService(new ConsoleLogSaver())}}))
       .beforeRequestHandler("add auth service", ctx => ({...ctx, services: {...ctx.services, auth: new AuthService()}}))
       .beforeRequestHandler("add caching service", ctx => ({...ctx, services: {...ctx.services, cache: new CacheService()}}))
