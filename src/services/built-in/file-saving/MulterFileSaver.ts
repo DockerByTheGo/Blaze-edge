@@ -1,24 +1,43 @@
+import type { Multer, StorageEngine } from "multer";
+import { promises as fs } from "node:fs";
 import { dirname, resolve, join, sep } from "node:path";
-import { promises as fs, type WriteFileOptions } from "node:fs";
+import type { IFileSaver, SaveIfNotExistsOptions, SaveIfNotExistsResult } from "../IFileSaver";
 
-export type SaveIfNotExistsOptions = WriteFileOptions;
-
-export type SaveIfNotExistsResult = {
-  path: string;
-  created: boolean;
-};
-
-const DEFAULT_STORAGE_ROOT = join(process.cwd(), "storage");
-
-export class FileSavingService {
+/**
+ * Multer-based storage implementation
+ * Integrates with Express/Multer for file uploads with custom storage engine
+ */
+export class MulterFileSaver implements IFileSaver {
   private readonly rootPath: string;
   private readonly rootWithSep: string;
 
-  constructor(rootDirectory: string = DEFAULT_STORAGE_ROOT) {
+  constructor(rootDirectory: string = join(process.cwd(), "uploads")) {
     this.rootPath = resolve(rootDirectory);
     this.rootWithSep = this.rootPath.endsWith(sep)
       ? this.rootPath
       : `${this.rootPath}${sep}`;
+  }
+
+  /**
+   * Creates a Multer storage engine for use with Express
+   */
+  createStorageEngine(): StorageEngine {
+    return {
+      destination: async (req, file, cb) => {
+        try {
+          const dest = this.rootPath;
+          await this.ensureDirectory(join(dest, "dummy"));
+          cb(null, dest);
+        } catch (error) {
+          cb(error as any);
+        }
+      },
+      filename: (req, file, cb) => {
+        const timestamp = Date.now();
+        const filename = `${timestamp}-${file.originalname}`;
+        cb(null, filename);
+      },
+    };
   }
 
   async saveIfNotExists(
@@ -32,7 +51,8 @@ export class FileSavingService {
     }
 
     await this.ensureDirectory(targetPath);
-    await fs.writeFile(targetPath, payload, options);
+    const buffer = typeof payload === "string" ? Buffer.from(payload) : payload;
+    await fs.writeFile(targetPath, buffer);
     return { path: targetPath, created: true };
   }
 

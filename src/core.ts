@@ -22,6 +22,8 @@ import { ServiceManager } from "./service-manager";
 import { FileSavingService, CacheService, type CacheHandlerConfig } from "./services";
 import { normalizeFileRoute } from "./route-handlers/variations/fileUtils";
 import { ConsoleLogSaver, LoggerService } from "./pluings/logger";
+import type { Schema } from "./route-handlers/variations/websocket/types";
+import type { IAuthService } from "./services/built-in/auth-service";
 const FILE_SAVER_SERVICE_NAME = "fileSaver";
 const CACHE_SERVICE_NAME = "cache";
 
@@ -251,7 +253,22 @@ routerHooks
       },
     });
     return this;
-  } // sets a  guard hook for authentication 
+  } // sets a  guard hook for authentication
+
+  /**
+   * Sets up authentication using a new modular IAuthService implementation
+   * Supports AuthService, GoogleAuthService, or custom implementations
+   */
+  useAuth<T extends IAuthService>(
+    authService: T,
+    config?: {
+      serviceName?: string;
+      hookName?: string;
+      attachAs?: string;
+    }
+  ): this {
+   
+  } 
 
   /**
    * Sets up pre-authentication logic.
@@ -379,6 +396,8 @@ routerHooks
     });
   }
 
+  setFileManagerHandler()
+
   // by default it uses the file name (or provided route) as the exposed route
   file<
     TPath extends string
@@ -489,13 +508,19 @@ routerHooks
 
   } // can be stacked and overwritten to
 
+  
+
 
   // note if you try to introduce optional param it will lead to weird behaviour where it  creates two paths for one added handler one which is [''] and the other is the desried 
   post<
     THandler extends (arg: (TArgs extends undefined ? URecord : z.infer<TArgs>) & ExtractParams<TPath>) => unknown,
     TArgs extends z.ZodObject | undefined,
     TPath extends string,
-  >(config: { path: TPath, handeler: THandler, args?: TArgs, cache?: CacheHandlerConfig<Parameters<THandler>[0]> }): Blazy<
+  >(config: { 
+    path: TPath,
+     handeler: THandler,
+      args?: TArgs, 
+      cache?: CacheHandlerConfig<Parameters<THandler>[0]> }): Blazy<
     TRouterTree &
     PathStringToObject<
       TPath,
@@ -674,7 +699,7 @@ routerHooks
     TRouterTree &
     PathStringToObject<
       TPath,
-      WsRouteHandler<TMessages>,
+      WebsocketRouteHandler<TMessages>,
       "ws"
     >,
     THooks

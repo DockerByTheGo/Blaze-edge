@@ -1,5 +1,7 @@
 import { describe, it, expect } from "bun:test";
 import { app } from "./server";
+import z from "zod/v4";
+
 
 describe("e2e simple app", () => {
   it("responds to POST /jiji/koko and WebSocket /rooms", async () => {
@@ -19,11 +21,36 @@ describe("e2e simple app", () => {
         console.log("gg",ctx) 
         return ctx
       })
+      .ws({
+        path: "/rooms",
+        messages: {
+          messagesItCanRecieve: {
+            "join-room": {
+              schema: z.object({ roomId: z.string() }),
+              handler: ({ data, ws }) => {
+                console.log("User wants to join room", data.roomId);
+              }
+            },
+          },
+          messagesItCanSend: {
+            "room-joined": {
+              schema: z.object({ roomId: z.string() }),
+              handler: v => {
+                
+              }
+            },
+          }
+        }
+      })
         .createClient()
-        .createClient()("http://localhost:" + port);
+        .createClient()("http://localhost:" + port)
       
       const httpReq = await (await client.routes.jiji.koko["/"].POST({ koko: "" })).json();
-      
+      client.routes.rooms["/"].ws.handle["room-joined"](v => {
+
+      })
+
+      client.routes.rooms["/"].ws.send["join-room"]({ roomId: "123" });
 
       
       await new Promise(resolve => setTimeout(resolve, 1000));
