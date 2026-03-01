@@ -1,7 +1,7 @@
 import { RouterObject } from "@blazyts/backend-lib";
 import type { PathStringToObject, RouterHooks, type RouteTree } from "@blazyts/backend-lib/src/core/server/router/types";
 import type { And, IFunc, KeyOfOnlyStringKeys, TypeSafeOmit, URecord, } from "@blazyts/better-standard-library";
-import { BasicValidator, ifNotNone, map, NormalFunc, objectEntries, Optionable, Try } from "@blazyts/better-standard-library";
+import { BasicValidator, ifNotNone, map, NormalFunc,  Optionable, Try } from "@blazyts/better-standard-library";
 import { FunctionRouteHandler } from "./route-handlers/variations/function/FunctionRouteHandler";
 import { Path } from "@blazyts/backend-lib/src/core/server/router/utils/path/Path";
 import { FileRouteHandler, NormalRouteHandler } from "./route-handlers/variations";
@@ -17,7 +17,6 @@ import type { IRouteHandler, RequestData, RouteFinder } from "@blazyts/backend-l
 import type { HandlerProtocol } from "./types";
 import { WebsocketRouteHandler } from "./route-handlers/variations/websocket";
 import { AuthService } from "./pluings/auth";
-import { AuthProvider, AuthVerificationResult, createLocalSessionProvider } from "./pluings/auth/providers";
 import { ServiceManager } from "./service-manager";
 import { FileSavingService, CacheService, type CacheHandlerConfig } from "./services";
 import { normalizeFileRoute } from "./route-handlers/variations/fileUtils";
@@ -36,7 +35,8 @@ type EmptyHooks = ReturnType<typeof Hooks.empty>
  */
 export class Blazy<
   TRouterTree extends RouteTree,
-  THooks extends RouterHooks
+  THooks extends RouterHooks,
+  Tservices extends Record<string, Service<ServiceBase<URecord>>> = {}
 > extends RouterObject<{
   beforeHandler: EmptyHooks,
   afterHandler: EmptyHooks,

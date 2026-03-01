@@ -1,7 +1,9 @@
 // remake to use the custom function constrrcut from better standsrdx lib 
 
-function add<TExisting, TNew>(ctx: TExisting, thingToAdd: TNew): TExisting & TNew {
-
-        // checks if it is there already
+export function add<TExisting, TNew>(ctx: TExisting, thingToAdd: TNew): (ctx: TExisting) => Omit<TExisting, keyof TNew> & TNew {
+        return (ctx: TExisting) => ({
+                ...ctx,
+                ...thingToAdd,
+        })
 }
 
