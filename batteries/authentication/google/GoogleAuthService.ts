@@ -1,4 +1,4 @@
-import type { IAuthService, TokenResult, VerificationResult } from "../../../main-app/src/services/built-in/auth-service/IAuthService";
+import type { IAuthService, TokenResult, VerificationResult } from "../../../main-app/src/services/built-in/auth/IAuthService";
 
 export type GoogleAuthConfig = {
   clientId: string;

@@ -1,8 +1,8 @@
+import { hash } from "bun";
 import z, { string } from "zod/v4";
-import { Blazy } from "../../../main-app/src/core";
-import { Message } from "../../../main-app/src/route-handlers/variations/websocket/types";
-
-export const app = Blazy
+import { Blazy } from "../../../src" 
+import { BlazyConstructor } from "src/app/constructors";
+export const app = BlazyConstructor
     .createProd()
     .http({
         path: "/koko",
@@ -29,3 +29,17 @@ export const app = Blazy
             ttl: 2
         }
     })
+    .beforeRequestHandler(
+      "generate unique id for each request and log the req",
+      ctx => { 
+        const recievedAt = new Date();
+        ctx
+        return  { 
+          ...ctx,
+          id: hash(JSON.stringify({
+            recievedAt, 
+            ...ctx
+          }))
+        }
+      }
+    )

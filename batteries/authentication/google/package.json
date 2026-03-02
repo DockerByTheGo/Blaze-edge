@@ -1,5 +1,6 @@
 {
-  "name": "google",
+  "name": "@blazyts/batteries-authentication-google",
+
   "private": true,
   "devDependencies": {
     "@types/bun": "latest"

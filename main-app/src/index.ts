@@ -1,1 +1,2 @@
-export type { ServiceDeault} from "./services"
+export { Blazy } from "./app/core";
+export * from "./services"

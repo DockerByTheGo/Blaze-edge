@@ -1,5 +1,5 @@
 import { Blazy } from "main-app/src/core";
-import { treeRouteFinder } from "main-app/src/route-finders";
+import { treeRouteFinder } from "main-app/src/route/finders";
 import { WebsocketRouteHandler } from "main-app/src/route-handlers/variations/websocket/WebsocketRouteHandler";
 import z from "zod/v4";
 import { describe, it, expect, expectTypeOf } from "bun:test";

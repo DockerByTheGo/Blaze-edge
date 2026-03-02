@@ -1,5 +1,4 @@
 import type { IResultable, Optionable } from "@blazyts/better-standard-library";
-import type { Service } from "main-app/src/service-manager";
 import type { Token } from "typescript";
 
 export type TokenResult = {

@@ -1,4 +1,4 @@
-import type { IAuthService, TokenResult } from "../../../main-app/src/services/built-in/auth-service/IAuthService";
+import type { IAuthService, TokenResult } from "../../../main-app/src/services/built-in/auth/IAuthService";
 import type { IResultable } from "@blazyts/better-standard-library";
 
 export type ClerkAuthConfig = {

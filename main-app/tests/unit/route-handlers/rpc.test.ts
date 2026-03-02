@@ -1,6 +1,6 @@
 import { Path } from "@blazyts/backend-lib/src/core/server";
 import { Blazy } from "main-app/src/core";
-import { treeRouteFinder } from "main-app/src/route-finders";
+import { treeRouteFinder } from "main-app/src/route/finders";
 import { describe, expect, test } from "bun:test";
 describe("RPC routes", () => {
   test("rpcFromFunction registers POST /rpc/{providedName}", () => {

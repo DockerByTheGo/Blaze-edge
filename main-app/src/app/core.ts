@@ -2,28 +2,16 @@ import { RouterObject } from "@blazyts/backend-lib";
 import type { PathStringToObject, RouterHooks, type RouteTree } from "@blazyts/backend-lib/src/core/server/router/types";
 import type { And, IFunc, KeyOfOnlyStringKeys, TypeSafeOmit, URecord, } from "@blazyts/better-standard-library";
 import { BasicValidator, ifNotNone, map, NormalFunc,  Optionable, Try } from "@blazyts/better-standard-library";
-import { FunctionRouteHandler } from "./route-handlers/variations/function/FunctionRouteHandler";
 import { Path } from "@blazyts/backend-lib/src/core/server/router/utils/path/Path";
-import { FileRouteHandler, NormalRouteHandler } from "./route-handlers/variations";
-import { DSLRouting } from "./route-matchers/dsl/main";
-import { NormalRouting, } from "./route-matchers/normal";
 import { Hook, Hooks, type HooksDefault } from "@blazyts/backend-lib/src/core/types/Hooks/Hooks";
-import type { ExtractParams } from "./route-matchers/dsl/types/extractParams";
-import { treeRouteFinder } from "./route-finders";
+import { treeRouteFinder } from "../route/finders";
 import z from "zod/v4";
-import { CleintBuilderConstructors, ClientBuilder } from "./client/client-builder/clientBuilder";
-import { RequestObjectHelper } from "@blazyts/backend-lib/src/core/utils/RequestObjectHelper";
+import { CleintBuilderConstructors, ClientBuilder } from "../client/client-builder/clientBuilder";
 import type { IRouteHandler, RequestData, RouteFinder } from "@blazyts/backend-lib/src/core/server";
-import type { HandlerProtocol } from "./types";
-import { WebsocketRouteHandler } from "./route-handlers/variations/websocket";
-import { AuthService } from "./pluings/auth";
-import { ServiceManager } from "./service-manager";
-import { FileSavingService, CacheService, type CacheHandlerConfig } from "./services";
-import { normalizeFileRoute } from "./route-handlers/variations/fileUtils";
-import { ConsoleLogSaver, LoggerService } from "./pluings/logger";
-import type { Schema } from "./route-handlers/variations/websocket/types";
-import type { IAuthService } from "./services/built-in/auth-service";
-import type { Service, ServiceBase } from "./services/main";
+import type { HandlerProtocol } from "../types";
+import type { IAuthService } from "../services/built-in/auth";
+import type { Service, ServiceBase } from "../services/main/Service";
+import type { ServiceManager } from "../services/manager/ServicesManager";
 const FILE_SAVER_SERVICE_NAME = "fileSaver";
 const CACHE_SERVICE_NAME = "cache";
 
@@ -47,30 +35,8 @@ export class Blazy<
 }, TRouterTree> {
   public services: ServiceManager;
 
-  static createEmpty(): Blazy<{},{
-  }> {
-    return new Blazy({
-      beforeHandler: Hooks.empty(),
-      afterHandler: Hooks.empty(),
-      onError: Hooks.empty(),
-      onStartup: Hooks.empty(),
-      onShutdown: Hooks.empty(),
+ 
 
-    }, {} as any, treeRouteFinder)
-    // .addService(CACHE_SERVICE_NAME, new CacheService())
-    .addService(FILE_SAVER_SERVICE_NAME, new FileSavingService())
-    // .addService("logger", new LoggerService(new ConsoleLogSaver()))
-    // .beforeRequestHandler("log", ctx => )
-  }
-
-  static createProd() {
-    return Blazy
-      .createEmpty()
-      .beforeRequestHandler("attach", ctx => ({...ctx as {reqData: RequestData}, services: {}})) 
-      .beforeRequestHandler("add logger service", ctx => ({...ctx, services: {...ctx.services, logger: new LoggerService(new ConsoleLogSaver())}}))
-      .beforeRequestHandler("add auth service", ctx => ({...ctx, services: {...ctx.services, auth: new AuthService()}}))
-      .beforeRequestHandler("add caching service", ctx => ({...ctx, services: {...ctx.services, cache: new CacheService()}}))
-  }
 
   /**
    * Creates a new instance of Blazy.
@@ -84,7 +50,6 @@ export class Blazy<
     // const cache = new Cache();
     super(
 routerHooks
-
  ,
       routes ?? {},
       routeFinder ?? treeRouteFinder

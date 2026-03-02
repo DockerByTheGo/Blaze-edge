@@ -1,5 +1,6 @@
 import type { IOptionable, IResultable, URecord } from "@blazyts/better-standard-library";
 import type z from "zod/v4";
+import type { ServiceDefault } from "../../main/Service";
 
 type CacheEntry<T> = {
     key: string,
@@ -9,7 +10,7 @@ type CacheEntry<T> = {
 
 export interface Cache<TEntries extends {
     [module: string]: z.ZodObject
-} extends Service> {
+} extends ServiceDefault> {
     entries : {[key in keyof TEntries]: {
         flush: ()   => void,
         getAll: () => z.infer<(CacheEntry<TEntries[key]>)[]>,

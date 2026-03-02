@@ -1,5 +1,5 @@
 {
-  "name": "in-memory",
+  "name": "@blazyts/batteries-cache-in-memory",
   "module": "index.ts",
   "type": "module",
   "private": true,

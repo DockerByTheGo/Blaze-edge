@@ -1,5 +1,5 @@
 {
-  "name": "redis-cache",
+  "name": "@blazyts/batteries-cache-redis",
   "module": "index.ts",
   "type": "module",
   "private": true,

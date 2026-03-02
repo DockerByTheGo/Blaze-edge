@@ -1,7 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import { app } from "./server";
 import z from "zod/v4";
-import { FileSavingService } from "main-app/src/services";
 
 
 describe("e2e simple app", () => {
@@ -12,7 +11,6 @@ describe("e2e simple app", () => {
     try {
       const client = app
       .beforeRequestHandler("provide user", ctx => ({...ctx, user: ctx.services.auth.getUserId(ctx.token)}))
-      .addService("auth-l", new FileSavingService())
       .beforeRequestHandler("log", ctx => {
         const recievedAt = Date.now();
         ctx.services.logger.saveLog({
