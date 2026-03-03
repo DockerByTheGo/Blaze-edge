@@ -12,15 +12,15 @@ import type { HandlerProtocol } from "../types";
 import type { IAuthService } from "../services/built-in/auth";
 import type { Service, ServiceBase } from "../services/main/Service";
 import type { ServiceManager } from "../services/manager/ServicesManager";
+import { NormalRouting, type ExtractParams } from "src/route/matchers/normal";
+import { normalizeFileRoute } from "src/route/handlers/variations/file/utils";
+import { FileRouteHandler } from "src/route/handlers/variations/file/File";
 const FILE_SAVER_SERVICE_NAME = "fileSaver";
 const CACHE_SERVICE_NAME = "cache";
 
 type EmptyHooks = ReturnType<typeof Hooks.empty>
 
-/**
- * Main Blazy framework class that extends RouterObject for building backend applications.
- * Provides methods for adding services, authentication, routing, and request handling.
- */
+
 export class Blazy<
   TRouterTree extends RouteTree,
   THooks extends RouterHooks,
@@ -37,17 +37,11 @@ export class Blazy<
 
  
 
-
-  /**
-   * Creates a new instance of Blazy.
-   * Initializes with a cache service.
-   */
   constructor(
     routerHooks: THooks,
     routes: TRouterTree,
     routeFinder: RouteFinder<any>
   ) {
-    // const cache = new Cache();
     super(
 routerHooks
  ,
@@ -317,6 +311,17 @@ routerHooks
     }
   }
 
+  rrws< 
+    THandler extends (arg: (TArgs extends undefined ? URecord : z.infer<TArgs>) & ExtractParams<TPath>) => unknown,
+    TArgs extends z.ZodObject | undefined,
+    TPath extends string,
+  >(v: {
+    handler: THandler,
+    args: TArgs,
+    path: TPath
+  }) {
+  }
+
   routifyRpc() { }
 
   // allows you to call multiple methods on the app while using the app object, this allosws for use cases where you may need to access the app object but do not wanna breake method chaining for example 
@@ -365,7 +370,6 @@ routerHooks
     });
   }
 
-  setFileManagerHandler()
 
   // by default it uses the file name (or provided route) as the exposed route
   file<

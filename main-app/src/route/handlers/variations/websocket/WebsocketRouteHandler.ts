@@ -16,7 +16,6 @@ export class WebsocketRouteHandler<
     TMessagesSchema extends Schema,
 > implements IRouteHandler<WebSocketMessage, WebSocketResponse> {
 
-    private connections = new Map<string, WebSocketConnection>();
 
     constructor(
         public readonly schema: TMessagesSchema,
