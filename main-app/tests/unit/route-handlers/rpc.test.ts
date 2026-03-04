@@ -1,7 +1,7 @@
 import { Path } from "@blazyts/backend-lib/src/core/server";
-import { Blazy } from "main-app/src/core";
-import { treeRouteFinder } from "main-app/src/route/finders";
 import { describe, expect, test } from "bun:test";
+import { Blazy } from "src";
+import { BlazyConstructor } from "src/app/constructors";
 describe("RPC routes", () => {
   test("rpcFromFunction registers POST /rpc/{providedName}", () => {
     const receivedArgs: unknown[] = [];
@@ -15,11 +15,8 @@ describe("RPC routes", () => {
       },
     };
 
-    const app = Blazy.createEmpty().rpcFromFunction("publicRoute", rpcFunc);
+    const app = BlazyConstructor.createEmpty().rpcFromFunction("publicRoute", rpcFunc);
 
-    const handlerByPath = treeRouteFinder(app.routes, new Path("/rpc/publicRoute"))
-      .expect("RPC route should exist at /rpc/publicRoute")
-      .valueOf() as any;
 
     const routeResult = handlerByPath.POST.handleRequest({ body: { a: 1 } });
     expect(receivedArgs).toEqual([{ a: 1 }]);

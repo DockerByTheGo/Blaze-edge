@@ -1,7 +1,7 @@
-import { Blazy } from "main-app/src/core";
-import type { FileClientRepresentation } from "main-app/src/route-handlers";
 import { describe, expect, it } from "bun:test";
 import { fileURLToPath } from "node:url";
+import { BlazyConstructor } from "src/app/constructors";
+import type { FileClientRepresentation } from "src/route/handlers/variations/file/File";
 
 
 describe("File route handler client surface", () => {
@@ -11,7 +11,7 @@ describe("File route handler client surface", () => {
     );
 
     const route = "/downloads/mock-route.txt";
-    const app = Blazy.create().file(fixturePath, route);
+    const app = BlazyConstructor.createEmpty().file(fixturePath, route);
     const client = app.createClient().createClient()("http://localhost:3000");
 
     const fileClient = client.routes.downloads["mock-route.txt"]["/"].static;

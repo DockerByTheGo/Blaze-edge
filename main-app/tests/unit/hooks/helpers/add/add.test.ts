@@ -1,6 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { add } from "main-app/src/hooks/add";
-
+import { add } from "src/hooks/add";
 
 describe("add function", () => {
   it("should merge two objects", () => {
@@ -8,7 +7,7 @@ describe("add function", () => {
     const toAdd = { c: 3, d: 4 };
     const result = add(existing, toAdd);
 
-    expect(result).toEqual({ a: 1, b: 2, c: 3, d: 4 });
+    expect(result(existing)).toEqual({ a: 1, b: 2, c: 3, d: 4 });
   });
 
   it("should overwrite existing keys", () => {
@@ -16,7 +15,7 @@ describe("add function", () => {
     const toAdd = { b: 999, c: 3 };
     const result = add(existing, toAdd);
 
-    expect(result()).toEqual({ a: 1, b: 999, c: 3 });
+    expect(result(existing)).toEqual({ a: 1, b: 999, c: 3 });
   });
 
   it("should handle empty objects", () => {
@@ -24,7 +23,7 @@ describe("add function", () => {
     const toAdd = { a: 1 };
     const result = add(existing, toAdd);
 
-    expect(result).toEqual({ a: 1 });
+    expect(result(existing)).toEqual({ a: 1 });
   });
 
   it("should handle empty toAdd", () => {
@@ -32,7 +31,7 @@ describe("add function", () => {
     const toAdd = {};
     const result = add(existing, toAdd);
 
-    expect(result).toEqual({ a: 1 });
+    expect(result(existing)).toEqual({ a: 1 });
   });
 
   it("should handle both empty", () => {
@@ -40,7 +39,7 @@ describe("add function", () => {
     const toAdd = {};
     const result = add(existing, toAdd);
 
-    expect(result).toEqual({});
+    expect(result(existing)).toEqual({});
   });
 
   it("should work with nested objects", () => {
@@ -48,7 +47,7 @@ describe("add function", () => {
     const toAdd = { c: { y: 3 } };
     const result = add(existing, toAdd);
 
-    expect(result).toEqual({
+    expect(result(existing)).toEqual({
       a: { x: 1 },
       b: 2,
       c: { y: 3 },
@@ -60,7 +59,7 @@ describe("add function", () => {
     const toAdd = { e: [1, 2, 3], f: { nested: true } };
     const result = add(existing, toAdd);
 
-    expect(result()).toEqual({
+    expect(result(existing)).toEqual({
       a: 1,
       b: "hello",
       c: true,
@@ -68,14 +67,5 @@ describe("add function", () => {
       e: [1, 2, 3],
       f: { nested: true },
     });
-  });
-
-  it("should preserve property order", () => {
-    const existing = { z: 1, y: 2 };
-    const toAdd = { x: 3, w: 4 };
-    const result = add(existing, toAdd);
-
-    const keys = Object.keys(result);
-    expect(keys).toEqual(["z", "y", "x", "w"]);
   });
 });

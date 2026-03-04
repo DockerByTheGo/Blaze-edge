@@ -65,7 +65,6 @@ export class ClientBuilder<
     return this;
   }
 
-  // TODO: make it so that if we add a certain header here it removes it from the requored parameters
   beforeSend<
     TReturn,
     TName extends string,

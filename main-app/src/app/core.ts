@@ -1,28 +1,26 @@
 import { RouterObject } from "@blazyts/backend-lib";
 import type { PathStringToObject, RouterHooks, type RouteTree } from "@blazyts/backend-lib/src/core/server/router/types";
-import type { And, IFunc, KeyOfOnlyStringKeys, TypeSafeOmit, URecord, } from "@blazyts/better-standard-library";
-import { BasicValidator, ifNotNone, map, NormalFunc, Optionable, Try } from "@blazyts/better-standard-library";
+import type { And, IFunc,  TypeSafeOmit, URecord } from "@blazyts/better-standard-library";
+import { BasicValidator, NormalFunc } from "@blazyts/better-standard-library";
 import { Path } from "@blazyts/backend-lib/src/core/server/router/utils/path/Path";
 import { Hook, Hooks, type HooksDefault } from "@blazyts/backend-lib/src/core/types/Hooks/Hooks";
 import { treeRouteFinder } from "../route/finders";
 import z from "zod/v4";
 import { CleintBuilderConstructors, ClientBuilder } from "../client/client-builder/clientBuilder";
-import type { IRouteHandler, RequestData, RouteFinder } from "@blazyts/backend-lib/src/core/server";
+import type { IRouteHandler, RouteFinder } from "@blazyts/backend-lib/src/core/server";
 import type { HandlerProtocol } from "../types";
-import type { IAuthService } from "../services/built-in/auth";
 import type { Service, ServiceBase } from "../services/main/Service";
-import { NormalRouting, type ExtractParams } from "src/route/matchers/normal";
+import { NormalRouting } from "src/route/matchers/normal";
 import { normalizeFileRoute } from "src/route/handlers/variations/file/utils";
 import { FileRouteHandler } from "src/route/handlers/variations/file/File";
 import { WebsocketRouteHandler } from "src/route/handlers/variations/websocket";
 import type { NormalRouteHandler } from "src/route/handlers";
 import type { Schema } from "src/route/handlers/variations/websocket/types";
-import type { ServiceManager } from "src/services/main";
+import { ServiceManager } from "src/services/main";
 const FILE_SAVER_SERVICE_NAME = "fileSaver";
 const CACHE_SERVICE_NAME = "cache";
 
 type EmptyHooks = ReturnType<typeof Hooks.empty>
-
 
 export class Blazy<
   TRouterTree extends RouteTree,
@@ -53,16 +51,6 @@ export class Blazy<
     );
     this.services = new ServiceManager();
     this.ctx = { services: this.services };
-    this.ensureDefaultServices();
-  }
-
-  private ensureDefaultServices(): void {
-    if (!this.services.hasService(FILE_SAVER_SERVICE_NAME)) {
-      this.services.addService(FILE_SAVER_SERVICE_NAME, new FileSavingService());
-    }
-    if (!this.services.hasService(CACHE_SERVICE_NAME)) {
-      this.services.addService(CACHE_SERVICE_NAME, new CacheService());
-    }
   }
 
   /**
@@ -394,14 +382,6 @@ export class Blazy<
     });
   }
 
-
-  notFound() {
-
-  } // can be stacked and overwritten to
-
-
-
-
   // note if you try to introduce optional param it will lead to weird behaviour where it  creates two paths for one added handler one which is [''] and the other is the desried 
   post<
     THandler extends (arg: (TArgs extends undefined ? URecord : z.infer<TArgs>) & ExtractParams<TPath>) => unknown,
@@ -424,7 +404,7 @@ export class Blazy<
     >,
     THooks
   > {
-    (this.ctx.services.services.cache as CacheService).registerHandler(`POST:${config.path}`, new NormalRouteHandler(config.handeler, { subRoute: config.path, verb: "POST", protocol: "POST" }))
+    (this.services.services.cache as CacheService).registerHandler(`POST:${config.path}`, new NormalRouteHandler(config.handeler, { subRoute: config.path, verb: "POST", protocol: "POST" }))
     return this.http<TPath, THandler, any, 'POST'>({
       path: config.path,
       handler: v => config.handeler(v),
@@ -545,7 +525,7 @@ export class Blazy<
   }
 
   /*
-  exposes a JSON RPC standard abiding the JSON rpc spec input and output, that is different from fromFunction which turns it into REST instead 
+  exposes a JSON RPC standard abiding the JSON rpc spec input and output, that is different from fromFunction which turns it into REST instead, it uses the custom Function construct from the better standard library which is designed to keep info 
   */
   rpcFromFunction<
     TName extends string,
