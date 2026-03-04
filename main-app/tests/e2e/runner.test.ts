@@ -44,7 +44,7 @@ describe("e2e simple app", () => {
         .createClient()
         .createClient()("http://localhost:" + port)
       
-      const httpReq = await (await client.routes.jiji.koko["/"].POST({ koko: "" })).json();
+      const httpReq =  (await client.routes.jiji.koko["/"].POST({ koko: "" }))
       client.routes.rooms["/"].ws.handle["room-joined"](v => {
 
       })

@@ -4,20 +4,7 @@ import type { URecord } from "@blazyts/better-standard-library";
 import { fetch } from "bun";
 
 
-
-
-function withStaticNew<T extends new (...args: any[]) => any>(Class: T) {
-  return class extends (Class as any) {
-    static new(...args: ConstructorParameters<T>) {
-      return new (this as any)(...args);
-    }
-  } as T & {
-    new(...args: ConstructorParameters<T>): InstanceType<T>;
-    new: (...args: ConstructorParameters<T>) => InstanceType<T>;
-  };
-}
-
-type NormalRouteHandlerClientRepresentation<TCtx, TReturn> = (meta: IRouteHandlerMetadata) => (v: TCtx) => Promise<{ json(): Promise<TReturn> }>
+type NormalRouteHandlerClientRepresentation<TCtx, TReturn> = (meta: IRouteHandlerMetadata) => (v: TCtx) => Promise<TReturn>
 
 
 export class NormalRouteHandler<
@@ -41,10 +28,10 @@ export class NormalRouteHandler<
     };
 
     const clientFn = async (v: TCtx) => {
-      return await fetch(metadata.serverUrl, {
+      return await (await fetch(metadata.serverUrl, {
         method: metadata.verb,
         body: JSON.stringify(v),
-      });
+      })).json()
     };
 
     Object.assign(clientFn, {
@@ -58,6 +45,3 @@ export class NormalRouteHandler<
 }
 
 
-
-// // Example usage of the decorator
-export const EnhancedNormalRouteHandler = withStaticNew(NormalRouteHandler);

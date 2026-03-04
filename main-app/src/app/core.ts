@@ -1,7 +1,7 @@
 import { RouterObject } from "@blazyts/backend-lib";
 import type { PathStringToObject, RouterHooks, type RouteTree } from "@blazyts/backend-lib/src/core/server/router/types";
 import type { And, IFunc, KeyOfOnlyStringKeys, TypeSafeOmit, URecord, } from "@blazyts/better-standard-library";
-import { BasicValidator, ifNotNone, map, NormalFunc,  Optionable, Try } from "@blazyts/better-standard-library";
+import { BasicValidator, ifNotNone, map, NormalFunc, Optionable, Try } from "@blazyts/better-standard-library";
 import { Path } from "@blazyts/backend-lib/src/core/server/router/utils/path/Path";
 import { Hook, Hooks, type HooksDefault } from "@blazyts/backend-lib/src/core/types/Hooks/Hooks";
 import { treeRouteFinder } from "../route/finders";
@@ -11,16 +11,19 @@ import type { IRouteHandler, RequestData, RouteFinder } from "@blazyts/backend-l
 import type { HandlerProtocol } from "../types";
 import type { IAuthService } from "../services/built-in/auth";
 import type { Service, ServiceBase } from "../services/main/Service";
-import type { ServiceManager } from "../services/manager/ServicesManager";
+import { NormalRouting, type ExtractParams } from "src/route/matchers/normal";
+import { normalizeFileRoute } from "src/route/handlers/variations/file/utils";
+import { FileRouteHandler } from "src/route/handlers/variations/file/File";
+import { WebsocketRouteHandler } from "src/route/handlers/variations/websocket";
+import type { NormalRouteHandler } from "src/route/handlers";
+import type { Schema } from "src/route/handlers/variations/websocket/types";
+import type { ServiceManager } from "src/services/main";
 const FILE_SAVER_SERVICE_NAME = "fileSaver";
 const CACHE_SERVICE_NAME = "cache";
 
 type EmptyHooks = ReturnType<typeof Hooks.empty>
 
-/**
- * Main Blazy framework class that extends RouterObject for building backend applications.
- * Provides methods for adding services, authentication, routing, and request handling.
- */
+
 export class Blazy<
   TRouterTree extends RouteTree,
   THooks extends RouterHooks,
@@ -35,26 +38,20 @@ export class Blazy<
 }, TRouterTree> {
   public services: ServiceManager;
 
- 
 
 
-  /**
-   * Creates a new instance of Blazy.
-   * Initializes with a cache service.
-   */
   constructor(
     routerHooks: THooks,
     routes: TRouterTree,
     routeFinder: RouteFinder<any>
   ) {
-    // const cache = new Cache();
     super(
-routerHooks
- ,
+      routerHooks
+      ,
       routes ?? {},
       routeFinder ?? treeRouteFinder
     );
-    this.services =  new ServiceManager();
+    this.services = new ServiceManager();
     this.ctx = { services: this.services };
     this.ensureDefaultServices();
   }
@@ -145,99 +142,14 @@ routerHooks
    * @param name - The name of the service.
    * @param v - The service object containing functions.
    */
-  addService<TName extends string, TService extends ServiceBase<URecord>>(name: TName, v: TService){
+  addService<TName extends string, TService extends ServiceBase<URecord>>(name: TName, v: TService) {
     this.services.addService(name, v);
     return this.beforeRequestHandler(
       `attach service ${name}`,
-       ctx => ({...ctx, services: {...ctx.services, [name]: v}})
+      ctx => ({ ...ctx, services: { ...ctx.services, [name]: v } })
     );
   }
 
-  getService<TService = unknown>(name: string): TService | undefined {
-    return this.services.getService<TService>(name);
-  }
-
-  /**
-   * Sets up authentication for the application.
-   * This method configures hooks for authentication.
-   */
-  auth(config?: {
-    serviceName?: string;
-    service?: AuthService<any>;
-    attachAs?: string;
-    hookName?: string;
-    allow?: (req: any) => boolean;
-    getAuthorizationHeader?: (req: any) => string | undefined;
-    providers?: AuthProvider[];
-  }): this {
-    const serviceName = config?.serviceName ?? "auth";
-    const attachAs = config?.attachAs ?? "auth";
-    const hookName = config?.hookName ?? "auth";
-
-    if (config?.service) {
-      this.addService(serviceName, config.service);
-    }
-
-    const authService = config?.service ?? this.getService<AuthService<any>>(serviceName);
-    const providers = config?.providers ? [...config.providers] : [];
-
-    if (providers.length === 0) {
-      if (!authService) {
-        throw new Error("Auth service is missing, unable to create local session provider");
-      }
-
-      providers.push(createLocalSessionProvider(authService));
-    }
-
-    this.beforeHandler({
-      name: hookName,
-      handler: (req: any) => {
-        if (config?.allow?.(req)) {
-          return req;
-        }
-
-        const authHeader =
-          config?.getAuthorizationHeader?.(req)
-          ?? req?.headers?.authorization
-          ?? req?.headers?.Authorization;
-
-        let verificationResult: AuthVerificationResult | null = null;
-        for (const provider of providers) {
-          const result = provider.authenticate({ req, authorization: authHeader });
-          if (result) {
-            verificationResult = result;
-            break;
-          }
-        }
-
-        if (!verificationResult) {
-          throw new Error("Unauthorized");
-        }
-
-        return {
-          ...req,
-          [attachAs]: verificationResult.identity,
-          authSession: verificationResult.raw ?? undefined,
-        };
-      },
-    });
-    return this;
-  } // sets a  guard hook for authentication
-
-  /**
-   * Sets up authentication using a new modular IAuthService implementation
-   * Supports AuthService, GoogleAuthService, or custom implementations
-   */
-  useAuth<T extends IAuthService>(
-    authService: T,
-    config?: {
-      serviceName?: string;
-      hookName?: string;
-      attachAs?: string;
-    }
-  ): this {
-   
-  } 
 
   /**
    * Sets up pre-authentication logic.
@@ -256,26 +168,26 @@ routerHooks
 
 
   beforeRequestHandler<
-  TReturn,
-  TName extends string>(
-    name: TName,
-    func: (arg: THooks["beforeHandler"]["TGetLastHookReturnType"]) => TReturn,
+    TReturn,
+    TName extends string>(
+      name: TName,
+      func: (arg: THooks["beforeHandler"]["TGetLastHookReturnType"]) => TReturn,
 
-  ): Blazy<
-    TRouterTree,
-    And<[
-      TypeSafeOmit<THooks, "beforeHandler">,
-      {
-        beforeHandler: Hooks<[
-          ...THooks["beforeHandler"]["v"],
-          Hook<
-            TName,
-            (arg: THooks["beforeHandler"]["TGetLastHookReturnType"]) => TReturn
-          >
-        ]>
-      }
-    ]>
-  > {
+    ): Blazy<
+      TRouterTree,
+      And<[
+        TypeSafeOmit<THooks, "beforeHandler">,
+        {
+          beforeHandler: Hooks<[
+            ...THooks["beforeHandler"]["v"],
+            Hook<
+              TName,
+              (arg: THooks["beforeHandler"]["TGetLastHookReturnType"]) => TReturn
+            >
+          ]>
+        }
+      ]>
+    > {
     this.beforeHandler({ name, handler: func })
     return this
   }
@@ -315,6 +227,17 @@ routerHooks
         this.post(key, value);
       });
     }
+  }
+
+  rrws<
+    THandler extends (arg: (TArgs extends undefined ? URecord : z.infer<TArgs>) & ExtractParams<TPath>) => unknown,
+    TArgs extends z.ZodObject | undefined,
+    TPath extends string,
+  >(v: {
+    handler: THandler,
+    args: TArgs,
+    path: TPath
+  }) {
   }
 
   routifyRpc() { }
@@ -365,7 +288,6 @@ routerHooks
     });
   }
 
-  setFileManagerHandler()
 
   // by default it uses the file name (or provided route) as the exposed route
   file<
@@ -375,11 +297,11 @@ routerHooks
     route?: TPath
   ): Blazy<
     TRouterTree & PathStringToObject<
-    TPath,
-     FileRouteHandler,
-     "static"
-     >,
-     THooks
+      TPath,
+      FileRouteHandler,
+      "static"
+    >,
+    THooks
   > {
     const normalizedRoute = normalizeFileRoute(route ?? filePath);
 
@@ -477,7 +399,7 @@ routerHooks
 
   } // can be stacked and overwritten to
 
-  
+
 
 
   // note if you try to introduce optional param it will lead to weird behaviour where it  creates two paths for one added handler one which is [''] and the other is the desried 
@@ -485,11 +407,12 @@ routerHooks
     THandler extends (arg: (TArgs extends undefined ? URecord : z.infer<TArgs>) & ExtractParams<TPath>) => unknown,
     TArgs extends z.ZodObject | undefined,
     TPath extends string,
-  >(config: { 
+  >(config: {
     path: TPath,
-     handeler: THandler,
-      args?: TArgs, 
-      cache?: CacheHandlerConfig<Parameters<THandler>[0]> }): Blazy<
+    handeler: THandler,
+    args?: TArgs,
+    cache?: CacheHandlerConfig<Parameters<THandler>[0]>
+  }): Blazy<
     TRouterTree &
     PathStringToObject<
       TPath,
@@ -605,15 +528,14 @@ routerHooks
   }
 
   rpc<
-  TName extends string,
-   THandlerReturn,
-   TArgs extends z.ZodObject | undefined,
-   >(v: {
+    TName extends string,
+    THandlerReturn,
+    TArgs extends z.ZodObject | undefined,
+  >(v: {
     name: TName,
-    handler: (arg: (TArgs extends undefined ? URecord : z.infer<TArgs>) ) => THandlerReturn,
+    handler: (arg: (TArgs extends undefined ? URecord : z.infer<TArgs>)) => THandlerReturn,
     args?: TArgs
-  })
-   {
+  }) {
     return this.post({
       path: `/rpc/${v.name}`,
       handeler: v.handler,
@@ -639,24 +561,7 @@ routerHooks
     }) as this;
   }
 
-  /* proppiatary handler aims to achieve a mixture of good performace while still maintaing safety  
-  
-    comes from blazy rpc 
-  */
-  brpc() { }
 
-  brpcFromFuncton() {
-
-  }
-
-
-  // requestResponseWebsocket<
-  //   TPath extends string,
-  //   TSchema extends z.ZodObject
-  // >(v: {
-  //   path: TPath,
-  //   TS
-  // })
 
   ws<
     TPath extends string,
@@ -676,7 +581,7 @@ routerHooks
     return this.addRoute({
       routeMatcher: new NormalRouting(v.path),
       handler: new WebsocketRouteHandler(v.messages, { subRoute: v.path }),
-      protocol: 'ws' 
+      protocol: 'ws'
     });
   }
 
@@ -699,7 +604,7 @@ routerHooks
 
           // Check if this is a WebSocket upgrade request
           const upgradeHeader = req.headers.get("upgrade");
-          
+
           if (upgradeHeader?.toLowerCase() === "websocket") {
             const success = server.upgrade(req, { data: { pathname, body: {}, type: "join" } });
             console.log("Upgrade success:", success);
@@ -720,7 +625,7 @@ routerHooks
             try { const text = await req.text(); if (text) body = { text }; } catch { body = {} }
           }
 
-          const res = this.route({ reqData:{url: req.url,protocol: req.method, body, verb: req.method, headers}});
+          const res = this.route({ reqData: { url: req.url, protocol: req.method, body, verb: req.method, headers } });
 
           // If router returned a native Response, forward it. Otherwise try to coerce.
           if (res instanceof Response) return res;
@@ -732,7 +637,7 @@ routerHooks
       },
 
       websocket: {
-        data: {} as WsMessage & { connectionId?: string }, 
+        data: {} as WsMessage & { connectionId?: string },
         open: (ws) => {
           // Generate a unique connection ID
           const connectionId = crypto.randomUUID();
@@ -740,34 +645,34 @@ routerHooks
           console.log("WebSocket connected:", connectionId, "pathname:", ws.data.pathname);
         },
         message: (ws, message) => {
-            const parsedMessage = JSON.parse(message.toString()) as WsMessage;
-            
-            // Find the handler for this route
-            const handlerOptional = treeRouteFinder(this.routes, new Path(ws.data.pathname));
-            
-            if (handlerOptional.isNone()) {
-              console.error("No handler found for path:", ws.data.pathname);
-              return;
-            }
-            
-            const routeHandlers = handlerOptional.unpack();
-            
-            // Get the ws handler from the protocol-organized structure
-            const routeHandler = routeHandlers.valueOf().ws;
-            
-            if (!routeHandler) {
-              console.error("No ws handler found for path:", ws.data.pathname);
-              console.log("Available protocols:", Object.keys(routeHandlers));
-              return;
-            }
-            
-            // Call the message handler directly from the schema
-            const messageHandler = routeHandler.schema.messagesItCanRecieve[parsedMessage.type];
-            if (messageHandler) {
-              messageHandler.handler({ data: parsedMessage.body, ws });
-            } else {
-              console.error("No message handler for type:", parsedMessage.type);
-            }
+          const parsedMessage = JSON.parse(message.toString()) as WsMessage;
+
+          // Find the handler for this route
+          const handlerOptional = treeRouteFinder(this.routes, new Path(ws.data.pathname));
+
+          if (handlerOptional.isNone()) {
+            console.error("No handler found for path:", ws.data.pathname);
+            return;
+          }
+
+          const routeHandlers = handlerOptional.unpack();
+
+          // Get the ws handler from the protocol-organized structure
+          const routeHandler = routeHandlers.valueOf().ws;
+
+          if (!routeHandler) {
+            console.error("No ws handler found for path:", ws.data.pathname);
+            console.log("Available protocols:", Object.keys(routeHandlers));
+            return;
+          }
+
+          // Call the message handler directly from the schema
+          const messageHandler = routeHandler.schema.messagesItCanRecieve[parsedMessage.type];
+          if (messageHandler) {
+            messageHandler.handler({ data: parsedMessage.body, ws });
+          } else {
+            console.error("No message handler for type:", parsedMessage.type);
+          }
         },
         close: (ws) => {
           console.log("WebSocket closed:", ws.data.connectionId);
