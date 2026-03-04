@@ -3,8 +3,8 @@ import type { IRouteHandlerMetadata } from "@blazyts/backend-lib/src/core/server
 import type { URecord } from "@blazyts/better-standard-library";
 import fs from "node:fs";
 import path from "node:path";
+import { guessMimeType, resolveServerFilePath } from "./utils";
 
-import { guessMimeType, resolveServerFilePath } from "./file/utils";
 
 export type FileClientRepresentation = {
   type: "file";

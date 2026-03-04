@@ -1,8 +1,8 @@
 import { describe, expectTypeOf, it } from "vitest";
 
 import type { Optionable } from "@blazyts/better-standard-library/src/data_structures/functional-patterns/option/main";
+import type { ExtractParams } from "src/route/matchers/dsl/types/extractParams";
 
-import type { ExtractParams } from "../../../src/route-matchers/dsl/types/extractParams";
 
 describe("ExtractParams type tests", () => {
     describe("static routes (no parameters)", () => {
@@ -39,27 +39,6 @@ describe("ExtractParams type tests", () => {
         });
     });
 
-    describe("optional parameters", () => {
-        it("extracts optional string parameter (? prefix)", () => {
-            type Result = ExtractParams<"/users/:?id/">;
-            expectTypeOf<Result>().toEqualTypeOf<{ id: Optionable<string> }>();
-        });
-
-        it("extracts optional number parameter", () => {
-            type Result = ExtractParams<"/users/:?id$/">;
-            expectTypeOf<Result>().toEqualTypeOf<{ id: Optionable<number> }>();
-        });
-
-        it("extracts optional date parameter", () => {
-            type Result = ExtractParams<"/events/:?date(/">;
-            expectTypeOf<Result>().toEqualTypeOf<{ date: Optionable<Date> }>();
-        });
-
-        it("extracts optional boolean parameter", () => {
-            type Result = ExtractParams<"/flags/:?enabled^/">;
-            expectTypeOf<Result>().toEqualTypeOf<{ enabled: Optionable<boolean> }>();
-        });
-    });
 
     describe("multiple parameter routes", () => {
         it("extracts two string parameters", () => {

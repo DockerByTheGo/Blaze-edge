@@ -1,11 +1,11 @@
 import { describe, it, expect } from "bun:test";
-import { Blazy } from "../main-app/src/core";
+import { BlazyConstructor } from "src/app/constructors";
+import { Message } from "src/route/handlers/variations/websocket/types";
 import z from "zod/v4";
-import { Message } from "../main-app/src/route-handlers/variations/websocket/types";
 
 describe("Client structure test", () => {
   it("should organize client routes by protocol", () => {
-    const app = Blazy.create()
+    const app = BlazyConstructor.createEmpty()
       .post({
         path: "/api/users",
         handeler: () => "created",

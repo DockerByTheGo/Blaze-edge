@@ -1,10 +1,9 @@
-import { Blazy } from "main-app/src/core";
-import { treeRouteFinder } from "main-app/src/route/finders";
-import { WebsocketRouteHandler } from "main-app/src/route-handlers/variations/websocket/WebsocketRouteHandler";
 import z from "zod/v4";
 import { describe, it, expect, expectTypeOf } from "bun:test";
-import { Message } from "main-app/src/route-handlers/variations/websocket/types";
 import { Path } from "@blazyts/backend-lib/src/core/server/router/utils/path/Path";
+import { WebsocketRouteHandler } from "src/route/handlers/variations/websocket";
+import { Message } from "src/route/handlers/variations/websocket/types";
+import { BlazyConstructor } from "src/app/constructors";
 
 describe("WebsocketRouteHandler (bun)", () => {
     const newMEssageSchema = z.object({ name: z.string(), password: z.string() })
@@ -54,7 +53,7 @@ describe("WebsocketRouteHandler (bun)", () => {
     })
     it("registers a ws handler when using Blazy.ws", () => {
         const pingSchema = z.object({ text: z.string() });
-        const app = Blazy
+        const app = BlazyConstructor
         .createEmpty()
         .ws({
             path: "/chat",
