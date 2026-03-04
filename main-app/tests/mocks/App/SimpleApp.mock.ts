@@ -12,7 +12,7 @@ export const app = BlazyConstructor
     .post({
         path: "/jiji/koko",
         handeler: v => {
-            return "fr"
+            return "fr" as const
         },
         args: z.object({ koko: z.string() })
     })

@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react'
-import './App.css'
 import { MockLogsRepo } from './logs-repo/MockLogsRepo'
 import type { LogsRepo } from './logs-repo'
 import type { Log } from '@blazyts/blazy-edge'
@@ -82,40 +81,54 @@ function App() {
   }
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <h1>📊 Logs Viewer</h1>
-        <p className="subtitle">Real-time log monitoring and analysis</p>
+    <div style={styles.app}>
+      <header style={styles.appHeader}>
+        <h1 style={styles.title}>📊 Logs Viewer</h1>
+        <p style={styles.subtitle}>Real-time log monitoring and analysis</p>
       </header>
 
-      <main className="app-main">
-        {error && <div className="error-banner">{error}</div>}
+      <main style={styles.appMain}>
+        {error && <div style={styles.errorBanner}>{error}</div>}
 
         <LogFilters filters={filters} onFiltersChange={setFilters} />
 
-        <div className="logs-stats">
-          <div className="stat">
-            <span className="stat-label">Total Logs</span>
-            <span className="stat-value">{stats.total}</span>
+        <div style={styles.logsStats}>
+          <div style={styles.stat}>
+            <span style={styles.statLabel}>Total Logs</span>
+            <span style={styles.statValue}>{stats.total}</span>
           </div>
-          <div className="stat">
-            <span className="stat-label">Filtered</span>
-            <span className="stat-value">{stats.filtered}</span>
+          <div style={styles.stat}>
+            <span style={styles.statLabel}>Filtered</span>
+            <span style={styles.statValue}>{stats.filtered}</span>
           </div>
-          <div className="stat">
-            <span className="stat-label">Status</span>
-            <span className="stat-value">{stats.status}</span>
+          <div style={styles.stat}>
+            <span style={styles.statLabel}>Status</span>
+            <span style={styles.statValue}>{stats.status}</span>
           </div>
         </div>
 
         {loading && filteredLogs.length === 0 ? (
-          <div className="loading">Loading logs...</div>
+          <div style={styles.loading}>Loading logs...</div>
         ) : (
           <LogViewer logs={filteredLogs} />
         )}
       </main>
     </div>
   )
+}
+
+const styles: Record<string, any> = {
+  app: { minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#0f172a', fontFamily: 'system-ui, Avenir, Helvetica, Arial, sans-serif', color: '#e2e8f0' },
+  appHeader: { background: 'linear-gradient(135deg,#0ea5e9 0%, #60a5fa 100%)', padding: '2rem', color: 'white', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' },
+  title: { fontSize: '2rem', fontWeight: 700, marginBottom: '0.5rem' },
+  subtitle: { fontSize: '1rem', opacity: 0.95 },
+  appMain: { flex: 1, padding: '2rem', maxWidth: 1400, width: '100%', margin: '0 auto' },
+  errorBanner: { backgroundColor: '#ef4444', color: 'white', padding: '1rem', borderRadius: 8, marginBottom: '1.5rem', borderLeft: '4px solid #b91c1c' },
+  logsStats: { display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', marginBottom: '2rem' },
+  stat: { backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: 8, padding: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' },
+  statLabel: { fontSize: '0.875rem', color: '#94a3b8', marginBottom: '0.5rem' },
+  statValue: { fontSize: '1.5rem', fontWeight: 700, color: '#3b82f6' },
+  loading: { textAlign: 'center', padding: '3rem 1rem', color: '#94a3b8', fontSize: '1.1rem' },
 }
 
 export default App

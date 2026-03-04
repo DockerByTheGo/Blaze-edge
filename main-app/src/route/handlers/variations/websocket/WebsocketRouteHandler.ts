@@ -28,7 +28,7 @@ export class WebsocketRouteHandler<
         const messageHandler = this.schema.messagesItCanRecieve[message.type];
         if (messageHandler) {
             try {
-                const parsed = messageHandler.schema.parse(message.data);
+                const parsed = messageHandler.schema.parse(message.body);
                 messageHandler.handler({ data: parsed, ws: undefined as any });
             } catch (error) {
                 }

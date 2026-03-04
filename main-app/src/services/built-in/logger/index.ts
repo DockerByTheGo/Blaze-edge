@@ -1,5 +1,5 @@
 import type { URecord } from "@blazyts/better-standard-library";
-import { ServiceDeault } from "main-app/src";
+import type { ServiceBase, ServiceDefault } from "src/services/main";
 
 export type HookLog = {
     name: string,
@@ -21,7 +21,7 @@ export type Log = {
     connectionId?: string
 }
 
-export interface ILogger extends ServiceDeault {
+export interface ILogger extends ServiceBase<{collectLogsFrom: ("beforeHandlerHooks" | "afterHandlerHooks" | "requestHandler" | "services")[]}> {
     logRequest(req: Request): Promise<Result>
     logHookExecution(hookType: "beforeHandler" | "afterHandler", log: HookLog): Promise<Result>
     logResponse(res: Response): Promise<Result>

@@ -1,3 +1,4 @@
+@import "tailwindcss";
 :root {
   /* Primary Colors */
   --color-primary: #3b82f6;
@@ -48,23 +49,27 @@
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
+
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Light Mode (Optional) */
 @media (prefers-color-scheme: light) {
   :root {
     --color-bg: #f8fafc;
     --color-bg-secondary: #f1f5f9;
     --color-bg-tertiary: #e2e8f0;
-
     --color-text: #1e293b;
     --color-text-secondary: #475569;
     --color-text-tertiary: #64748b;
-
     --color-border: #cbd5e1;
     --color-border-light: #dfe5eb;
-
-    --color-primary: #3b82f6;
   }
 }
 
@@ -78,17 +83,49 @@ html,
 body {
   width: 100%;
   height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
   background-color: var(--color-bg);
   color: var(--color-text);
 }
 
-#app {
+#root {
   width: 100%;
   min-height: 100vh;
+}
+
+a {
+  font-weight: 500;
+  color: var(--color-primary);
+  text-decoration: inherit;
+}
+
+a:hover {
+  color: var(--color-primary-light);
+}
+
+button {
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: var(--color-primary);
+  color: white;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+
+button:hover {
+  background-color: var(--color-primary-dark);
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
 }
 
 /* Scrollbar Styling */
@@ -110,14 +147,27 @@ body {
   background-color: var(--color-border-light);
 }
 
-/* Button Reset */
-button {
-  font-family: inherit;
-}
-
 /* Code Styling */
 code,
 pre {
   font-family: 'Monaco', 'Courier New', 'Courier', monospace;
   font-size: 0.875rem;
+}
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
 }
