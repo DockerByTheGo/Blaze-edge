@@ -1,7 +1,7 @@
 import { RouterObject } from "@blazyts/backend-lib";
 import type { PathStringToObject, RouterHooks, type RouteTree } from "@blazyts/backend-lib/src/core/server/router/types";
 import type { And, IFunc,  TypeSafeOmit, URecord } from "@blazyts/better-standard-library";
-import { BasicValidator, NormalFunc } from "@blazyts/better-standard-library";
+import { BasicValidator, entries, NormalFunc } from "@blazyts/better-standard-library";
 import { Path } from "@blazyts/backend-lib/src/core/server/router/utils/path/Path";
 import { Hook, Hooks, type HooksDefault } from "@blazyts/backend-lib/src/core/types/Hooks/Hooks";
 import { treeRouteFinder } from "../route/finders";
@@ -211,7 +211,7 @@ export class Blazy<
       });
     }
     else {
-      objectEntries(v).filter(([key, val]) => typeof val === "function").forEach(([key, value]) => {
+      entries(v).filter(([key, val]) => typeof val === "function").forEach(([key, value]) => {
         this.post(key, value);
       });
     }
