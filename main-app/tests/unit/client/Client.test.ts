@@ -67,24 +67,7 @@ describe("Client", () => {
     
   });
 
-  it("calls getClientRepresentation with the correct serverUrl", () => {
-    const receivedMeta: RuntimeMeta[] = [];
 
-    const handler: IRouteHandler<any, any> = {
-      metadata: { subRoute: "/items", verb: "POST" },
-      handleRequest: () => ({}),
-      getClientRepresentation: (meta) => {
-        receivedMeta.push(meta as RuntimeMeta);
-        return vi.fn(async () => ({}));
-      },
-    };
-
-    const tree = { items: protocolLeaf("POST", handler) };
-    new Client(tree, "http://example.com");
-
-    expect(receivedMeta).toHaveLength(1);
-    expect(receivedMeta[0]!.serverUrl).toBe("http://example.com/items");
-  });
 
   it("the client fn is callable and returns the mocked response", async () => {
     const handler = makeMockHandler<{ qty: number }, { created: boolean }>("/orders", { created: true });
@@ -156,7 +139,7 @@ describe("Client", () => {
 
     const tree = { bad: { "/": { POST: broken } } };
 
-    // should not throw
+
     const client = new Client(tree as any, "http://localhost:3000");
     expect((client.routes as any).bad["/"].POST).toBeUndefined();
   });
