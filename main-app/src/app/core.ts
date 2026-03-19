@@ -1,7 +1,6 @@
 import { RouterObject } from "@blazyts/backend-lib";
 import type { PathStringToObject, RouterHooks, type RouteTree } from "@blazyts/backend-lib/src/core/server/router/types";
 import type { And, IFunc,  TypeSafeOmit, URecord } from "@blazyts/better-standard-library";
-import { BasicValidator, NormalFunc } from "@blazyts/better-standard-library";
 import { Path } from "@blazyts/backend-lib/src/core/server/router/utils/path/Path";
 import { Hook, Hooks, type HooksDefault } from "@blazyts/backend-lib/src/core/types/Hooks/Hooks";
 import { treeRouteFinder } from "../route/finders";
@@ -211,7 +210,7 @@ export class Blazy<
       });
     }
     else {
-      objectEntries(v).filter(([key, val]) => typeof val === "function").forEach(([key, value]) => {
+      entries(v).filter(([key, val]) => typeof val === "function").forEach(([key, value]) => {
         this.post(key, value);
       });
     }
@@ -251,30 +250,30 @@ export class Blazy<
    * @param func - The function to add as a route.
    * @template TFunc - The type of the function.
    */
-  simpleAddRoute<TFunc extends IFunc<string, Schema, URecord>>(func: TFunc) {
-    this.addRoute({
-      routeMatcher: new NormalRouting(`/rpc/${func.name}`),
-      handler: new NormalRouteHandler(ctx => {
-        return new BasicValidator(func.argsSchema).validate({}).try({
-          ifError: {
-            typeMismatch: v => new Response(JSON.stringify({ error: "Invalid schema", details: v }), {
-              status: 400,
-              headers: {
-                "Content-Type": "application/json",
-              },
-            }),
-          },
-          "ifSuccess": v => new Response(JSON.stringify({ result: func.execute(v) }), {
-            status: 200,
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }),
-        })
-      }),
-      hooks: {}
-    });
-  }
+  // simpleAddRoute<TFunc extends IFunc<string, Schema, URecord>>(func: TFunc) {
+  //   this.addRoute({
+  //     routeMatcher: new NormalRouting(`/rpc/${func.name}`),
+  //     handler: new NormalRouteHandler(ctx => {
+  //       // return new BasicValidator(func.argsSchema).validate({}).try({
+  //       //   ifError: {
+  //       //     typeMismatch: v => new Response(JSON.stringify({ error: "Invalid schema", details: v }), {
+  //       //       status: 400,
+  //       //       headers: {
+  //       //         "Content-Type": "application/json",
+  //       //       },
+  //       //     }),
+  //       //   },
+  //       //   "ifSuccess": v => new Response(JSON.stringify({ result: func.execute(v) }), {
+  //       //     status: 200,
+  //       //     headers: {
+  //       //       "Content-Type": "application/json",
+  //       //     },
+  //       //   }),
+  //       // })
+  //     }),
+  //     hooks: {}
+  //   });
+  // }
 
 
   // by default it uses the file name (or provided route) as the exposed route
