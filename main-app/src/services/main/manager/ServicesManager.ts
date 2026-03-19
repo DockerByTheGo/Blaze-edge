@@ -1,5 +1,5 @@
 import type { KeyOfOnlyStringKeys } from "@blazyts/better-standard-library";
-import { servicify, type Service, type ServiceDefault } from "../main";
+import type { ServiceDefault } from "../Service";
 
 export class ServiceManager<Services extends Record<string, ServiceDefault> = Record<string, ServiceDefault>> {
   config = {};
