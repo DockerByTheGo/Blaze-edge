@@ -22,6 +22,7 @@ export function addServices<TApp extends Blazy<any, any, any>>(app: TApp): TApp 
     path: "/:serviceName/:methodName",
     handeler: async (ctx: any) => {
       try {
+        console.log("ddd",ctx)
         const { serviceName, methodName } = ctx.params || {};
         const args = ctx.body ?? {};
         

@@ -23,8 +23,13 @@ export class BlazyConstructor {
   }
 
   static createProd() {
-    return BlazyConstructor 
+    const app =  BlazyConstructor 
       .createEmpty()
-      .beforeRequestHandler("attach", ctx => ({...ctx as {reqData: RequestData}, services: {}})) 
+     
+      
+
+      return app
+      .beforeRequestHandler("attach", ctx => ({...ctx as {reqData: RequestData}, services: {...app.services.services, mamanger: app.services }}))
+
   }
 }

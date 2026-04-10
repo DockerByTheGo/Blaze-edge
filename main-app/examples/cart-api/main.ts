@@ -7,28 +7,26 @@ const cartService = {
     getAll: () => ["cart 1", "cart 2", "cart 3"]
 };
 
-const app = BlazyConstructor
+const res = await BlazyConstructor
 .createProd()
-
-await app
-.addService(
-    "cartService",
-    cartService
-    )
-.beforeRequestHandler("add services", ctx => {
-    return {...ctx, services: {...app.services.services, manager: app.services}}
+.block(v => {
+    console.log(v.routes)
+    return v 
 })
-
-.beforeRequestHandler("log", ctx => console.log(ctx))
+.addService("cartService", cartService)
+.block(app => addServices(app))
 .get({
     path: "/hi",
     handler: ctx => ctx.services.cartService.getAll(),
     args: undefined
-});
-
-console.log(app.route({
+})
+.route({
     reqData: {
-        "url": "http://localhost:3000/cart/getAll",
-        protocol: "GET"
+        "url": "http://localhost:3000/cartService/getAll",
+        protocol: "POST",
+        
     }
-}));
+})
+
+
+console.log(await res.v.body)
