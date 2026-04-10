@@ -11,13 +11,14 @@ const app = BlazyConstructor
 .createProd()
 
 await app
-.addService("cartService", cartService)
+.addService(
+    "cartService",
+    cartService
+    )
 .beforeRequestHandler("add services", ctx => {
     return {...ctx, services: {...app.services.services, manager: app.services}}
 })
-.block(app => {
-    return addServices(app)
-})
+
 .beforeRequestHandler("log", ctx => console.log(ctx))
 .get({
     path: "/hi",

@@ -16,7 +16,6 @@ import type { URecord } from "@blazyts/better-standard-library";
  */
 export function addServices<TApp extends Blazy<any, any, any>>(app: TApp): TApp {
   let modifiedApp = app;
-  
   // Add a catch-all POST route pattern for services
   // Pattern: /{serviceName}/{methodName}
   modifiedApp = modifiedApp.post({

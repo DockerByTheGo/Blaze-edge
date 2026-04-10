@@ -134,7 +134,7 @@ export class Blazy<
    * @param v - The service object containing functions.
    */
   addService<TName extends string, TService extends ServiceBase<URecord>>(name: TName, v: TService) {
-    this.services.addService(name, v);
+    this.services.addService({name, service: v});
     return this 
   }
 
