@@ -13,9 +13,11 @@ import { NormalRouting } from "src/route/matchers/normal";
 import { normalizeFileRoute } from "src/route/handlers/variations/file/utils";
 import { FileRouteHandler } from "src/route/handlers/variations/file/File";
 import { WebsocketRouteHandler } from "src/route/handlers/variations/websocket";
-import type { NormalRouteHandler } from "src/route/handlers";
+import { NormalRouteHandler } from "src/route/handlers";
 import type { Schema } from "src/route/handlers/variations/websocket/types";
 import { ServiceManager } from "src/services/main";
+import type { ExtractParams } from "src/route/matchers/dsl/types/extractParams";
+import { DSLRouting } from "src/route/matchers/dsl/main";
 const FILE_SAVER_SERVICE_NAME = "fileSaver";
 const CACHE_SERVICE_NAME = "cache";
 
@@ -49,7 +51,6 @@ export class Blazy<
       routeFinder ?? treeRouteFinder
     );
     this.services = new ServiceManager();
-    this.ctx = { services: this.services };
   }
 
   /**
@@ -113,7 +114,7 @@ export class Blazy<
     const protocol = v.protocol || 'http';
     current["/"][protocol] = modifiedHandler;
 
-    return new Blazy(this.routerHooks, newRoutes, this.routeFinder, this.services) as unknown as Blazy<
+    return new Blazy(this.routerHooks, newRoutes, this.routeFinder,) as unknown as Blazy<
       TRouterTree &
       PathStringToObject<
         TPath,
@@ -126,15 +127,15 @@ export class Blazy<
 
   /**
    * Adds a service to the Blazy instance, making it available through hooks.
+   * Services are accessible in context as:
+   * - ctx.services.serviceName (direct access to service)
+   * - ctx.services (access to ServiceManager itself)
    * @param name - The name of the service.
    * @param v - The service object containing functions.
    */
   addService<TName extends string, TService extends ServiceBase<URecord>>(name: TName, v: TService) {
     this.services.addService(name, v);
-    return this.beforeRequestHandler(
-      `attach service ${name}`,
-      ctx => ({ ...ctx, services: { ...ctx.services, [name]: v } })
-    );
+    return this 
   }
 
 
@@ -240,7 +241,9 @@ export class Blazy<
 
 
 
-  block<TReturn extends Blazy>(func: (app: this) => TReturn): TReturn { }
+  block<TReturn extends Blazy>(func: (app: this) => TReturn): TReturn {
+    return func(this)
+   }
 
   /**
    * Adds a simple route for a function with schema validation.
@@ -403,7 +406,7 @@ export class Blazy<
     >,
     THooks
   > {
-    (this.services.services.cache as CacheService).registerHandler(`POST:${config.path}`, new NormalRouteHandler(config.handeler, { subRoute: config.path, verb: "POST", protocol: "POST" }))
+    // (this.services.services.cache as CacheService).registerHandler(`POST:${config.path}`, new NormalRouteHandler(config.handeler, { subRoute: config.path, verb: "POST", protocol: "POST" }))
     return this.http<TPath, THandler, any, 'POST'>({
       path: config.path,
       handler: v => config.handeler(v),
@@ -431,7 +434,7 @@ export class Blazy<
 
   get<
     TPath extends string,
-    THandler extends (arg: (TArgs extends undefined ? URecord : TArgs) & ExtractParams<TPath>) => unknown,
+    THandler extends (arg: (TArgs extends undefined ? URecord : TArgs) & ExtractParams<TPath> & THooks["beforeHandler"]["TGetLastHookReturnType"]) => unknown,
     TArgs extends URecord | undefined
   >(config: {
     path: TPath,
@@ -453,7 +456,8 @@ export class Blazy<
 
     return this.http<TPath, THandler, any, 'GET'>({
       path: config.path,
-      handler: v => v.path === "GET" ? config.handler(v) : this.notFound(),
+      // handler: v => v.path === "GET" ? config.handler(v) : this.notFound(),
+      handler: config.handler,
       args: config.args,
       meta: { verb: "GET", protocol: "GET" as const },
       cache: config.cache,
@@ -527,10 +531,9 @@ export class Blazy<
   exposes a JSON RPC standard abiding the JSON rpc spec input and output, that is different from fromFunction which turns it into REST instead, it uses the custom Function construct from the better standard library which is designed to keep info 
   */
   rpcFromFunction<
-    TName extends string,
-    TFunc extends IFunc<TName, any, any>,
-  >(name: TName, func: TFunc) {
-    const subRoute = `/rpc/${name}`;
+    TFunc extends IFunc<string, any, any>,
+  >( func: TFunc) {
+    const subRoute = `/rpc/${func.name}`;
     return this.post({
       handeler: (ctx: { body?: Parameters<TFunc["execute"]>[0] }) => {
         const args = ctx.body ?? ({} as Parameters<TFunc["execute"]>[0]);

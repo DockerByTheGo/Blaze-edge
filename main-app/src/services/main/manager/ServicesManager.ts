@@ -37,6 +37,6 @@ export class ServiceManager<Services extends Record<string, ServiceDefault> = Re
 
 
 
-servicify(new ServiceManager({})).methods.addService.onCalled(v => {
-  console.log("Service added:", v);
-})
+// servicify(new ServiceManager({})).methods.addService.onCalled(v => {
+//   console.log("Service added:", v);
+// })

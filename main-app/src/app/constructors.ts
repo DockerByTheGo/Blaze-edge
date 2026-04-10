@@ -1,5 +1,6 @@
 import { Hooks } from "@blazyts/backend-lib";
 import { Blazy } from "./core";
+import { treeRouteFinder } from "src/route/finders";
 
 export class BlazyConstructor {
 

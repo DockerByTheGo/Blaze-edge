@@ -1,5 +1,5 @@
+import type { IAuthService, TokenResult } from "@blazyts/blazy-edge";
 import { randomUUID } from "crypto";
-import type { IAuthService, TokenResult, VerificationResult } from "./IAuthService";
 
 /**
  * Generic JWT-based authentication service
