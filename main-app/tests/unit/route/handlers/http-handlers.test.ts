@@ -23,15 +23,15 @@ describe("HTTP handlers", () => {
   it("registers and resolves a GET handler on a dynamic path", () => {
     const app = BlazyConstructor.createEmpty().get({
       path: "/users/:id",
-      handler: ({ id }) => ({ body: { id, type: "dynamic-get" } }),
+      handler: ({ id, params }) => ({ body: { id, paramsId: params.id, type: "dynamic-get" } }),
       args: undefined,
     });
 
     const protocols = treeRouteFinder(app.routes, new Path("/users/42")).unpack().raw as any;
 
     expect(protocols.GET).toBeDefined();
-    expect(protocols.GET.handleRequest({ id: "42" })).toEqual({
-      body: { id: "42", type: "dynamic-get" },
+    expect(protocols.GET.handleRequest({})).toEqual({
+      body: { id: "42", paramsId: "42", type: "dynamic-get" },
     });
   });
 
@@ -55,10 +55,12 @@ describe("HTTP handlers", () => {
   it("registers and resolves a POST handler on a dynamic path", () => {
     const app = BlazyConstructor.createEmpty().post({
       path: "/users/:userId/posts/:postId",
-      handeler: ({ userId, postId, body }: { userId: string; postId: string; body: { content: string } }) => ({
+      handeler: ({ userId, postId, params, body }: { userId: string; postId: string; params: { userId: string; postId: string }; body: { content: string } }) => ({
         body: {
           userId,
           postId,
+          paramsUserId: params.userId,
+          paramsPostId: params.postId,
           content: body.content,
           type: "dynamic-post",
         },
@@ -69,13 +71,13 @@ describe("HTTP handlers", () => {
 
     expect(protocols.POST).toBeDefined();
     expect(protocols.POST.handleRequest({
-      userId: "7",
-      postId: "11",
       body: { content: "hello world" },
     })).toEqual({
       body: {
         userId: "7",
         postId: "11",
+        paramsUserId: "7",
+        paramsPostId: "11",
         content: "hello world",
         type: "dynamic-post",
       },

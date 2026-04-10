@@ -26,6 +26,47 @@ const isProtocolHandlers = (value: any): boolean => {
     return Object.keys(value).some(key => protocols.includes(key));
 };
 
+const wrapHandlerContextWithParams = (
+    handler: IRouteHandler<Request, any>,
+    params: Record<string, string>,
+): IRouteHandler<Request, any> => {
+    if (Object.keys(params).length === 0) {
+        return handler;
+    }
+
+    return {
+        ...handler,
+        handleRequest: (ctx: Request = {} as Request) => {
+            const nextCtx = {
+                ...ctx,
+                ...params,
+                params: {
+                    ...(ctx as Record<string, unknown>)?.params as Record<string, string> | undefined,
+                    ...params,
+                },
+            };
+
+            return handler.handleRequest(nextCtx);
+        },
+    };
+};
+
+const wrapProtocolHandlersWithParams = (
+    handlers: Record<string, IRouteHandler<Request, any>>,
+    params: Record<string, string>,
+) => {
+    if (Object.keys(params).length === 0) {
+        return handlers;
+    }
+
+    return Object.fromEntries(
+        Object.entries(handlers).map(([protocol, handler]) => [
+            protocol,
+            wrapHandlerContextWithParams(handler, params),
+        ]),
+    );
+};
+
 /**
  * Tree-based route finder that:
  * 1. Traverses the route tree structure to find the path
@@ -69,17 +110,18 @@ export const treeRouteFinder: RouteFinder<RouteTree> = (routesTree, path) => {
      */
     const traverse = (
         currentNode: RouteTree,
-        remainingParts: string[]
+        remainingParts: string[],
+        collectedParams: Record<string, string> = {},
     ): Optionable<any> => {
         // If no more parts to match, check if current node has a "/" with protocol handlers
         if (remainingParts.length === 0) {
             const protocolHandlers = currentNode["/"];
             if (protocolHandlers && isProtocolHandlers(protocolHandlers)) {
-                return Optionable.some(protocolHandlers);
+                return Optionable.some(wrapProtocolHandlersWithParams(protocolHandlers, collectedParams));
             }
             // Fallback: if "/" contains a single handler (old structure), return it
             if (protocolHandlers && isRouteHandler(protocolHandlers)) {
-                return Optionable.some(protocolHandlers);
+                return Optionable.some(wrapHandlerContextWithParams(protocolHandlers, collectedParams));
             }
             return Optionable.none();
         }
@@ -88,7 +130,7 @@ export const treeRouteFinder: RouteFinder<RouteTree> = (routesTree, path) => {
 
         // Try static (hardcoded) route first
         if (currentPart && currentNode[currentPart]) {
-            const staticResult = traverse(currentNode[currentPart] as RouteTree, restParts);
+            const staticResult = traverse(currentNode[currentPart] as RouteTree, restParts, collectedParams);
             if (staticResult.isSome()) {
                 return staticResult;
             }
@@ -98,7 +140,15 @@ export const treeRouteFinder: RouteFinder<RouteTree> = (routesTree, path) => {
         const dynamicSegments = Object.keys(currentNode).filter(isDynamic);
 
         for (const dynamicSegment of dynamicSegments) {
-            const dynamicResult = traverse(currentNode[dynamicSegment] as RouteTree, restParts);
+            const paramName = dynamicSegment.slice(1);
+            const dynamicResult = traverse(
+                currentNode[dynamicSegment] as RouteTree,
+                restParts,
+                {
+                    ...collectedParams,
+                    [paramName]: currentPart,
+                },
+            );
             if (dynamicResult.isSome()) {
                 return dynamicResult;
             }
