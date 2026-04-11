@@ -1,5 +1,12 @@
-import type { Log, RequestLog } from '@blazyts/blazy-edge'
+import type { Log } from '@blazyts/blazy-edge'
 import type { LogsRepo } from './index'
+
+export type WebSocketLogMessage = {
+  connectionId: string
+  type: 'sent' | 'received'
+  data: unknown
+  timestamp: Date
+}
 
 export class MockLogsRepo implements LogsRepo {
   private logs: Log[] = [
@@ -62,12 +69,7 @@ export class MockLogsRepo implements LogsRepo {
   ]
 
   // Example websocket messages for the connection
-  private wsMessages: Array<{
-    connectionId: string
-    type: 'sent' | 'received'
-    data: any
-    timestamp: Date
-  }> = [
+  private wsMessages: WebSocketLogMessage[] = [
     {
       connectionId: 'conn-001',
       type: 'received',
@@ -100,6 +102,10 @@ export class MockLogsRepo implements LogsRepo {
   }
 
   async getAllLogs(): Promise<Log[]> {
+    return this.getAllLogsSnapshot()
+  }
+
+  getAllLogsSnapshot(): Log[] {
     return [...this.logs].sort(
       (a, b) =>
         new Date(b.requestReceived.recievedAt).getTime() -
@@ -107,7 +113,7 @@ export class MockLogsRepo implements LogsRepo {
     )
   }
 
-  async getWebSocketMessages(connectionId: string): Promise<Array<{ type: 'sent' | 'received'; data: any; timestamp: Date }>> {
+  async getWebSocketMessages(connectionId: string): Promise<Array<Omit<WebSocketLogMessage, 'connectionId'>>> {
     return this.wsMessages
       .filter(msg => msg.connectionId === connectionId)
       .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())

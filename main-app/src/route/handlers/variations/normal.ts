@@ -8,11 +8,11 @@ type NormalRouteHandlerClientRepresentation<TCtx, TReturn> = (meta: IRouteHandle
 
 
 export class NormalRouteHandler<
-  TCtx extends { body: URecord },
-  TReturn extends { body: URecord },
+  TCtx extends URecord,
+  TReturn = unknown,
 > implements IRouteHandler<
   TCtx,
-  TReturn
+  any
 > {
   constructor(
     public handleRequest: (arg: TCtx) => TReturn,
@@ -43,5 +43,3 @@ export class NormalRouteHandler<
     return clientFn;
   }
 }
-
-

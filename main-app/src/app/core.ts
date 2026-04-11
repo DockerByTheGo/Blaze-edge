@@ -1,6 +1,6 @@
 import { RouterObject } from "@blazyts/backend-lib";
 import type { PathStringToObject, RouterHooks, type RouteTree } from "@blazyts/backend-lib/src/core/server/router/types";
-import type { And, IFunc,  TypeSafeOmit, URecord } from "@blazyts/better-standard-library";
+import { matchString, type And, type IFunc,  type TypeSafeOmit, type URecord,  } from "@blazyts/better-standard-library";
 import { Path } from "@blazyts/backend-lib/src/core/server/router/utils/path/Path";
 import { Hook, Hooks, type HooksDefault } from "@blazyts/backend-lib/src/core/types/Hooks/Hooks";
 import { treeRouteFinder } from "../route/finders";
@@ -18,10 +18,14 @@ import type { Schema } from "src/route/handlers/variations/websocket/types";
 import { ServiceManager } from "src/services/main";
 import type { ExtractParams } from "src/route/matchers/dsl/types/extractParams";
 import { DSLRouting } from "src/route/matchers/dsl/main";
+import { app } from "@test/e2e/server";
+import { HtmlFileResponse, HtmlResponse, JsonResponse } from "src/response";
 const FILE_SAVER_SERVICE_NAME = "fileSaver";
 const CACHE_SERVICE_NAME = "cache";
 
 type EmptyHooks = ReturnType<typeof Hooks.empty>
+const subAppTypes = ["contained", "applyToParent", "global"] as const
+type SubAppTypes = (typeof subAppTypes)[number]
 
 export class Blazy<
   TRouterTree extends RouteTree,
@@ -465,6 +469,24 @@ export class Blazy<
 
   }
 
+  html<TPath extends string>(config: {
+    path: TPath,
+    html: string,
+    init?: ResponseInit,
+  } | {
+    path: TPath,
+    filePath: string,
+    init?: ResponseInit,
+  }) {
+    return this.get({
+      path: config.path,
+      handler: () => "html" in config
+        ? HtmlResponse(config.html, config.init)
+        : HtmlFileResponse(config.filePath, config.init),
+      args: undefined,
+    })
+  }
+
   /**
    * Adds a route from a typed function.
    * @param name - The name of the route.
@@ -611,10 +633,10 @@ export class Blazy<
 
           // If router returned a native Response, forward it. Otherwise try to coerce.
           if (res instanceof Response) return res;
-          return new Response(JSON.stringify(res), { headers: { "content-type": "application/json" } });
+          return JsonResponse(res);
         } catch (e) {
           console.log(e)
-          return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { "content-type": "application/json" } });
+          return JsonResponse({ error: String(e) }, { status: 500 });
         }
       },
 
@@ -665,15 +687,35 @@ export class Blazy<
     return server;
   }
 
-  applySubRouter<T extends Blazy>(v: Blazy) {
-
+  applySubApp<T extends BlazyDefault, TType extends SubAppTypes>(v: T, type : TType) {
+    
+    switch (type) {
+      case "applyToParent": 
+        break;
+    case "contained":
+        break;
+      case "global":
+        
+        Object.entries(v.services.services).forEach(([name, value]) => 
+          this.services.addService({name, service: value})
+        )
+        
+        Object.entries(v.routerHooks).forEach(([hookBundleName, hooksBundle]) => 
+          hooksBundle.v.forEach(hook => 
+            this.routerHooks[hookBundleName as keyof RouterHooks].add(hook)
+          )
+      )
+        break
+    }
   }
 
 
-  applySubrouterInline<Treturn extends Blazy>(func: (subRouter: this) => Treturn): this { } // so that we preserve intellisense 
+  applySubAppInline<Treturn extends Blazy>(func: (subRouter: this) => Treturn): this { } // so that we preserve intellisense 
 
   createSubrouter(): this { // so that we preserve intellisnse however note that you can define a subrouter in different file that way because it will create circular dependnecy 
 
   }
 
 }
+
+export type BlazyDefault = Blazy<RouteTree, RouterHooks>

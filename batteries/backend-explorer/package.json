@@ -1,5 +1,5 @@
 {
-  "name": "vite-project",
+  "name": "@bllazys/backend-explorer",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -12,11 +12,9 @@
   "dependencies": {
     "@blazyts/better-standard-library": "workspace:*",
     "@blazyts/blazy-edge": "workspace:*",
-    "@tailwindcss/vite": "^4.2.1",
     "@types/bun": "latest",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "tailwindcss": "^4.2.1"
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
