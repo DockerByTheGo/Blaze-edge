@@ -1,7 +1,8 @@
 import type { BlazyDefault, Log } from "@blazyts/blazy-edge";
 import type { CSSProperties, FC } from "react";
 
-import { useEffect, useMemo, useState } from "react";
+import { useObjectState } from "@blazytsts/utils_react-utils";
+import { useEffect, useMemo } from "react";
 
 import type { LogsRepo } from "../../../../logs-repo";
 
@@ -153,14 +154,14 @@ export const LogsView: FC<LogsViewProps> = ({
   logsRepo,
   action,
 }) => {
-  const [filters, setFilters] = useState<FiltersState>(initialFilters);
-  const [logs, setLogs] = useState<Log[]>([]);
-  const [refreshCount, setRefreshCount] = useState(0);
-  const [status, setStatus] = useState("Idle");
-  const sourceLogs = logs;
+  const filters = useObjectState<FiltersState>(initialFilters);
+  const logs = useObjectState<Log[]>([]);
+  const refreshCount = useObjectState(0);
+  const status = useObjectState("Idle");
+  const sourceLogs = logs.state;
   const filteredLogs = useMemo(
-    () => filterLogs(sourceLogs, filters),
-    [filters, sourceLogs],
+    () => filterLogs(sourceLogs, filters.state),
+    [filters.state, sourceLogs],
   );
 
   useEffect(() => {
@@ -173,24 +174,24 @@ export const LogsView: FC<LogsViewProps> = ({
           return;
         }
 
-        setLogs(nextLogs);
-        setStatus("Loaded");
+        logs.set(nextLogs);
+        status.set("Loaded");
       })
       .catch((error: unknown) => {
         if (!isActive) {
           return;
         }
 
-        setStatus(error instanceof Error ? error.message : String(error));
+        status.set(error instanceof Error ? error.message : String(error));
       });
 
     return () => {
       isActive = false;
     };
-  }, [action, logsRepo, refreshCount]);
+  }, [action, logsRepo, refreshCount.state]);
 
   useEffect(() => {
-    const refreshLogs = () => setRefreshCount(current => current + 1);
+    const refreshLogs = () => refreshCount.set(current => current + 1);
 
     window.addEventListener(logsRefreshEventName, refreshLogs);
 
@@ -222,10 +223,10 @@ export const LogsView: FC<LogsViewProps> = ({
               logs
             </span>
           </div>
-          <div style={styles.status}>{status}</div>
+          <div style={styles.status}>{status.state}</div>
         </header>
 
-        <LogFilters filters={filters} onFiltersChange={setFilters} />
+        <LogFilters filters={filters.state} onFiltersChange={filters.set} />
         <LogViewer logs={filteredLogs} />
       </section>
     </main>

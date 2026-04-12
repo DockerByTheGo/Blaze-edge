@@ -1,4 +1,4 @@
-import { HtmlResponse, type Blazy, type BlazyDefault } from "@blazyts/blazy-edge"
+import { HtmlPageResponse, HtmlResponse, type Blazy, type BlazyDefault } from "@blazyts/blazy-edge"
 import { LogsView } from "../ui/pages/logs"
 import { renderToString } from "react-dom/server";
 import { ServicesUi } from "../ui/pages/services";
@@ -87,7 +87,7 @@ function setupUi(app: BlazyDefault, logsRepo: LogsRepo){
     .get({
       path: "/logs",
       handler: ctx => {
-        return HtmlResponse(renderToString(<LogsView app={ctx} logsRepo={logsRepo} />))
+        return HtmlPageResponse(renderToString(<LogsView app={ctx} logsRepo={logsRepo} />))
       },
       args: undefined 
     })
@@ -95,7 +95,7 @@ function setupUi(app: BlazyDefault, logsRepo: LogsRepo){
       "path": "/services",
       handler: ctx => {
         console.log("dd",ctx.services)
-        return HtmlResponse( renderToString(<ServicesUi services={ctx.services} />))},
+        return HtmlPageResponse( renderToString(<ServicesUi services={ctx.services} />))},
       args: undefined
     })
 }

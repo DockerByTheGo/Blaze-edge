@@ -1,9 +1,11 @@
 import type { Log } from "@blazyts/blazy-edge";
 import type { CSSProperties, FC } from "react";
 
-import { useEffect, useMemo, useState } from "react";
+import { useObjectState } from "@blazytsts/utils_react-utils";
+import { useEffect, useMemo } from "react";
 
 import { MockLogsRepo } from "../../logs-repo/MockLogsRepo";
+import { monospaceFont } from "../styles";
 
 type LogEntryProps = {
   log: Log;
@@ -29,7 +31,6 @@ type ResponseDetails = {
   sentAt?: string | number | Date;
 };
 
-const monospaceFont = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace";
 
 const styles: Record<string, CSSProperties> = {
   entry: {
@@ -249,23 +250,23 @@ function getMethodBackground(method: string) {
 }
 
 const LogEntry: FC<LogEntryProps> = ({ log }) => {
-  const [expanded, setExpanded] = useState(false);
-  const [wsMessages, setWsMessages] = useState<WebSocketMessage[] | null>(null);
-  const [wsFilter, setWsFilter] = useState<"all" | "received" | "sent">("all");
+  const expanded = useObjectState(false);
+  const wsMessages = useObjectState<WebSocketMessage[] | null>(null);
+  const wsFilter = useObjectState<"all" | "received" | "sent">("all");
   useEffect(() => {
     if (log.connectionId) {
       const repo = new MockLogsRepo();
-      repo.getWebSocketMessages(log.connectionId).then(setWsMessages);
+      repo.getWebSocketMessages(log.connectionId).then(wsMessages.set);
     }
   }, [log.connectionId]);
 
   const filteredWsMessages = useMemo(() => {
-    if (!wsMessages)
+    if (!wsMessages.state)
       return null;
-    if (wsFilter === "all")
-      return wsMessages;
-    return wsMessages.filter(m => m.type === wsFilter);
-  }, [wsMessages, wsFilter]);
+    if (wsFilter.state === "all")
+      return wsMessages.state;
+    return wsMessages.state.filter(m => m.type === wsFilter.state);
+  }, [wsMessages.state, wsFilter.state]);
 
   const formatDuration = (ms: number) => {
     if (ms < 1000)
@@ -286,17 +287,17 @@ const LogEntry: FC<LogEntryProps> = ({ log }) => {
 
   return (
     <div style={styles.entry}>
-      <div style={styles.summary} onClick={() => setExpanded(!expanded)}>
+      <div style={styles.summary} onClick={() => expanded.set(current => !current)}>
         <span style={{ ...styles.badge, ...styles.statusBadge, background: getStatusBackground(statusCode) }}>{statusCode}</span>
         <span style={{ ...styles.badge, ...styles.methodBadge, background: getMethodBackground(method) }}>{method}</span>
         <span style={styles.path}>{path}</span>
         <span style={styles.protocol}>{protocol}</span>
         <span style={styles.time}>{new Date(timestamp).toLocaleTimeString()}</span>
         <span style={styles.duration}>{formatDuration(duration)}</span>
-        <span style={styles.chevron}>{expanded ? "▼" : "▶"}</span>
+        <span style={styles.chevron}>{expanded.state ? "▼" : "▶"}</span>
       </div>
 
-      {expanded && (
+      {expanded.state && (
         <div style={styles.details}>
           <div style={styles.detailSection}>
             <h4 style={styles.detailHeading}>Request</h4>
@@ -340,33 +341,33 @@ const LogEntry: FC<LogEntryProps> = ({ log }) => {
             )}
           </div>
 
-          {log.connectionId && wsMessages && (
+          {log.connectionId && wsMessages.state && (
             <div style={styles.detailSection}>
               <h4 style={styles.detailHeading}>
                 WebSocket Messages (
-                {wsMessages.length}
+                {wsMessages.state.length}
                 )
               </h4>
 
               <div style={styles.wsFilterList}>
                 <button
-                  style={{ ...styles.wsFilterButton, ...(wsFilter === "all" ? styles.wsFilterAllActive : {}) }}
-                  onClick={() => setWsFilter("all")}
-                  aria-pressed={wsFilter === "all"}
+                  style={{ ...styles.wsFilterButton, ...(wsFilter.state === "all" ? styles.wsFilterAllActive : {}) }}
+                  onClick={() => wsFilter.set("all")}
+                  aria-pressed={wsFilter.state === "all"}
                 >
                   All
                 </button>
                 <button
-                  style={{ ...styles.wsFilterButton, ...(wsFilter === "received" ? styles.wsFilterReceivedActive : {}) }}
-                  onClick={() => setWsFilter("received")}
-                  aria-pressed={wsFilter === "received"}
+                  style={{ ...styles.wsFilterButton, ...(wsFilter.state === "received" ? styles.wsFilterReceivedActive : {}) }}
+                  onClick={() => wsFilter.set("received")}
+                  aria-pressed={wsFilter.state === "received"}
                 >
                   Received
                 </button>
                 <button
-                  style={{ ...styles.wsFilterButton, ...(wsFilter === "sent" ? styles.wsFilterSentActive : {}) }}
-                  onClick={() => setWsFilter("sent")}
-                  aria-pressed={wsFilter === "sent"}
+                  style={{ ...styles.wsFilterButton, ...(wsFilter.state === "sent" ? styles.wsFilterSentActive : {}) }}
+                  onClick={() => wsFilter.set("sent")}
+                  aria-pressed={wsFilter.state === "sent"}
                 >
                   Sent
                 </button>
@@ -374,7 +375,7 @@ const LogEntry: FC<LogEntryProps> = ({ log }) => {
 
               <div style={styles.wsMessageList}>
                 {(filteredWsMessages || [])
-                  .filter(msg => msg.type === wsFilter || wsFilter === "all")
+                  .filter(msg => msg.type === wsFilter.state || wsFilter.state === "all")
                   .map((msg, idx) => (
                     <div key={`${msg.timestamp.toString()}-${idx}`} style={{ ...styles.wsMessage, ...(msg.type === "sent" ? styles.wsMessageSent : styles.wsMessageReceived) }}>
                       <div style={styles.wsMessageHeader}>

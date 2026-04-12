@@ -1,0 +1,1 @@
+export const monospaceFont = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace";
