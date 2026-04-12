@@ -9,12 +9,10 @@ const cartService = {
 const res = await BlazyConstructor
 .createProd()
 .block(v => {
-    console.log(v.routes)
     return v 
 })
 .addService("cartService", cartService)
 .block(a => {
-    console.log("ser", a.services)
     return a
 })
 .block(backendUi)
@@ -24,5 +22,3 @@ const res = await BlazyConstructor
     args: undefined
 })
 .listen(3223)
-
-console.log(res.body)
