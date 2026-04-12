@@ -13,6 +13,10 @@ const res = await BlazyConstructor
     return v 
 })
 .addService("cartService", cartService)
+.block(a => {
+    console.log(a)
+    return a
+})
 .block(backendUi)
 .get({
     path: "/hi",

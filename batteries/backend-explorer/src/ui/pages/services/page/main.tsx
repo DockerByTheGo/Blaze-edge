@@ -1,9 +1,10 @@
+import type { URecord } from "@blazyts/better-standard-library";
+import type { CSSProperties } from "react";
+
 import { useState } from "react";
 
 import { logsRefreshEventName } from "../../logs/page/main";
 import { Collapsible } from "../components";
-import type { URecord } from "@blazyts/better-standard-library";
-import "../../../styles.css";
 
 type ServiceMap = Record<string, unknown>;
 type RunEntry = {
@@ -25,11 +26,176 @@ type MethodDescriptor = {
   runs: RunEntry[];
 };
 
-const panelClassName = "panel";
+const monospaceFont = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace";
 
-const sectionClassName = "service-section";
-
-
+const styles: Record<string, CSSProperties> = {
+  root: {
+    boxSizing: "border-box",
+    color: "#f1f5f9",
+    display: "flex",
+    flexDirection: "column",
+    fontSize: 14,
+    gap: 16,
+  },
+  header: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+  },
+  title: {
+    color: "#fff",
+    fontSize: 24,
+    fontWeight: 600,
+    margin: 0,
+  },
+  description: {
+    color: "#94a3b8",
+    margin: 0,
+  },
+  panel: {
+    background: "#0f172a",
+    border: "1px solid #334155",
+    borderRadius: 8,
+    color: "#f1f5f9",
+  },
+  panelEmpty: {
+    color: "#94a3b8",
+    padding: 20,
+  },
+  section: {
+    background: "rgb(2 6 23 / 70%)",
+    border: "1px solid #334155",
+    borderRadius: 8,
+    padding: "12px 16px",
+  },
+  methodPanel: {
+    background: "rgb(15 23 42 / 80%)",
+    border: "1px solid #334155",
+    borderRadius: 8,
+  },
+  sectionSummary: {
+    color: "#e2e8f0",
+    cursor: "pointer",
+    fontWeight: 500,
+  },
+  pre: {
+    background: "#020617",
+    borderRadius: 6,
+    color: "#cbd5e1",
+    fontSize: 12,
+    overflowX: "auto",
+    padding: 12,
+  },
+  servicePre: {
+    marginTop: 12,
+  },
+  inlineHeader: {
+    alignItems: "center",
+    display: "flex",
+    gap: 16,
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  subtitle: {
+    color: "#e2e8f0",
+    fontWeight: 500,
+    margin: 0,
+  },
+  runButton: {
+    background: "#0ea5e9",
+    border: 0,
+    borderRadius: 6,
+    color: "#020617",
+    cursor: "pointer",
+    fontWeight: 500,
+    padding: "8px 12px",
+  },
+  runButtonDisabled: {
+    background: "#334155",
+    color: "#94a3b8",
+    cursor: "not-allowed",
+  },
+  fieldLabel: {
+    color: "#94a3b8",
+    display: "block",
+    fontSize: 12,
+    letterSpacing: "0.08em",
+    marginBottom: 8,
+    textTransform: "uppercase",
+  },
+  formCaption: {
+    color: "#94a3b8",
+    fontSize: 12,
+    marginBottom: 8,
+  },
+  textarea: {
+    background: "#0f172a",
+    border: "1px solid #334155",
+    borderRadius: 6,
+    color: "#f1f5f9",
+    font: "inherit",
+    fontFamily: monospaceFont,
+    fontSize: 12,
+    marginBottom: 12,
+    minHeight: 112,
+    outline: 0,
+    padding: 10,
+    resize: "vertical",
+    width: "100%",
+  },
+  responseHeader: {
+    alignItems: "center",
+    display: "flex",
+    gap: 16,
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  responseStatus: {
+    color: "#94a3b8",
+    fontSize: 12,
+  },
+  responsePre: {
+    border: "1px solid #334155",
+    minHeight: 112,
+  },
+  runsStack: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 12,
+    marginTop: 12,
+  },
+  runEmpty: {
+    border: "1px dashed #334155",
+    borderRadius: 6,
+    color: "#94a3b8",
+    padding: "16px 12px",
+  },
+  runPanel: {
+    background: "rgb(2 6 23 / 80%)",
+    border: "1px solid #334155",
+    borderRadius: 8,
+  },
+  runSummary: {
+    color: "#e2e8f0",
+    cursor: "pointer",
+    fontSize: 14,
+    padding: "8px 12px",
+  },
+  runBody: {
+    borderTop: "1px solid #334155",
+    display: "flex",
+    flexDirection: "column",
+    gap: 24,
+    padding: 12,
+  },
+  errorLabel: {
+    color: "#fda4af",
+  },
+  errorPre: {
+    background: "rgb(76 5 25 / 40%)",
+    color: "#fecdd3",
+  },
+};
 
 function isCallable(value: unknown): value is (...args: unknown[]) => unknown {
   return typeof value === "function";
@@ -58,7 +224,8 @@ function formatValue(value: unknown): string {
 
   try {
     return JSON.stringify(value, null, 2);
-  } catch {
+  }
+  catch {
     return String(value);
   }
 }
@@ -73,7 +240,6 @@ function tryParseJson(value: string): unknown {
 }
 
 function getMethodEntries(service: URecord): Array<[string, MethodDescriptor]> {
-
   return Object.entries(service)
     .filter(([name]) => name !== "config")
     .map(([name, value]) => {
@@ -95,14 +261,14 @@ function getMethodEntries(service: URecord): Array<[string, MethodDescriptor]> {
         ] satisfies [string, MethodDescriptor];
       }
 
-      const descriptor = value
-      const callable =
-        descriptor && isCallable(descriptor.call) ? descriptor.call : undefined;
-      const schema =
-        descriptor?.schema ??
-        (callable && "schema" in callable
-          ? (callable as { schema?: unknown }).schema
-          : undefined);
+      const descriptor = value;
+      const callable
+        = descriptor && isCallable(descriptor.call) ? descriptor.call : undefined;
+      const schema
+        = descriptor?.schema
+          ?? (callable && "schema" in callable
+            ? (callable as { schema?: unknown }).schema
+            : undefined);
       const runsValue = descriptor?.runs;
 
       return [
@@ -149,14 +315,14 @@ export function ServicesUi({ services }: ServicesUiProps) {
     method: MethodDescriptor,
   ) {
     if (!method.invokable) {
-      setStatusByMethod((current) => ({
+      setStatusByMethod(current => ({
         ...current,
         [methodKey]: "This method is not invokable from the UI.",
       }));
       return;
     }
 
-    setStatusByMethod((current) => ({
+    setStatusByMethod(current => ({
       ...current,
       [methodKey]: "Running...",
     }));
@@ -185,15 +351,15 @@ export function ServicesUi({ services }: ServicesUiProps) {
         throw new Error(formatValue(result));
       }
 
-      setResponseByMethod((current) => ({
+      setResponseByMethod(current => ({
         ...current,
         [methodKey]: formatValue(result),
       }));
-      setStatusByMethod((current) => ({
+      setStatusByMethod(current => ({
         ...current,
         [methodKey]: "Success",
       }));
-      setLocalRunsByMethod((current) => ({
+      setLocalRunsByMethod(current => ({
         ...current,
         [methodKey]: [
           {
@@ -204,18 +370,19 @@ export function ServicesUi({ services }: ServicesUiProps) {
           ...(current[methodKey] ?? []),
         ],
       }));
-    } catch (error) {
+    }
+    catch (error) {
       const message = error instanceof Error ? error.message : String(error);
 
-      setResponseByMethod((current) => ({
+      setResponseByMethod(current => ({
         ...current,
         [methodKey]: message,
       }));
-      setStatusByMethod((current) => ({
+      setStatusByMethod(current => ({
         ...current,
         [methodKey]: "Error",
       }));
-      setLocalRunsByMethod((current) => ({
+      setLocalRunsByMethod(current => ({
         ...current,
         [methodKey]: [
           {
@@ -226,181 +393,195 @@ export function ServicesUi({ services }: ServicesUiProps) {
           ...(current[methodKey] ?? []),
         ],
       }));
-    } finally {
+    }
+    finally {
       notifyLogsAction();
     }
   }
 
   return (
-    <section className="services-root">
-      <header className="services-header">
-        <h2 className="services-title">Services</h2>
-        <p className="services-description">
+    <section style={styles.root}>
+      <header style={styles.header}>
+        <h2 style={styles.title}>Services</h2>
+        <p style={styles.description}>
           Inspect each service, invoke methods, and review captured runs.
         </p>
       </header>
 
-      {serviceEntries.length === 0 ? (
-        <div className="panel panel-empty">
-          No services are currently available.
-        </div>
-      ) : (
-        serviceEntries.map(([serviceName, service]) => {
-          const methods = getMethodEntries(service);
+      {serviceEntries.length === 0
+        ? (
+            <div style={{ ...styles.panel, ...styles.panelEmpty }}>
+              No services are currently available.
+            </div>
+          )
+        : (
+            serviceEntries.map(([serviceName, service]) => {
+              const methods = getMethodEntries(service);
 
-          return (
-            <Collapsible
-              key={serviceName}
-              className={panelClassName}
-              defaultOpen
-              meta={`${methods.length} methods`}
-              title={serviceName}
-            >
-                {methods.length === 0 ? (
-                  <div className={sectionClassName}>
-                    No callable methods were found for this service.
-                  </div>
-                ) : (
-                  methods.map(([methodName, method]) => {
-                    const methodKey = `${serviceName}.${methodName}`;
-                    const endpoint = `/${serviceName}/${methodName}`;
-                    const runs = [
-                      ...(localRunsByMethod[methodKey] ?? []),
-                      ...method.runs,
-                    ];
+              return (
+                <Collapsible
+                  key={serviceName}
+                  defaultOpen
+                  meta={`${methods.length} methods`}
+                  style={styles.panel}
+                  title={serviceName}
+                >
+                  {methods.length === 0
+                    ? (
+                        <div style={styles.section}>
+                          No callable methods were found for this service.
+                        </div>
+                      )
+                    : (
+                        methods.map(([methodName, method]) => {
+                          const methodKey = `${serviceName}.${methodName}`;
+                          const endpoint = `/${serviceName}/${methodName}`;
+                          const runs = [
+                            ...(localRunsByMethod[methodKey] ?? []),
+                            ...method.runs,
+                          ];
 
-                    return (
-                      <Collapsible
-                        key={methodKey}
-                        className="method-panel"
-                        meta={`${runs.length} runs`}
-                        title={methodName}
-                      >
-                          {method.schema !== undefined && (
-                            <details className={sectionClassName}>
-                              <summary className="section-summary">
-                                Schema
-                              </summary>
-                              <pre className="service-pre">
-                                {formatValue(method.schema)}
-                              </pre>
-                            </details>
-                          )}
-
-                          <div className={sectionClassName}>
-                            <div className="services-inline-header">
-                              <h3 className="service-subtitle">Test</h3>
-                              <button
-                                className="run-button"
-                                disabled={!method.invokable}
-                                onClick={() =>
-                                  void invokeMethod(
-                                    serviceName,
-                                    methodName,
-                                    methodKey,
-                                    method,
-                                  )
-                                }
-                                type="button"
-                              >
-                                Run
-                              </button>
-                            </div>
-
-                            <label className="field-label">
-                              Args
-                            </label>
-                            <div className="form-caption">
-                              POST {endpoint}
-                            </div>
-                            <textarea
-                              className="service-textarea"
-                              onChange={(event) =>
-                                setArgsByMethod((current) => ({
-                                  ...current,
-                                  [methodKey]: event.target.value,
-                                }))
-                              }
-                              placeholder={'{\n  "example": true\n}'}
-                              spellCheck={false}
-                              value={argsByMethod[methodKey] ?? ""}
-                            />
-
-                            <div className="response-header">
-                              <label className="field-label">
-                                Response
-                              </label>
-                              <span className="response-status">
-                                {statusByMethod[methodKey] ?? "Idle"}
-                              </span>
-                            </div>
-                            <pre className="response-pre">
-                              {responseByMethod[methodKey] ?? "Run the method to see a response."}
-                            </pre>
-                          </div>
-
-                          <details className={sectionClassName}>
-                            <summary className="section-summary">
-                              Runs
-                            </summary>
-
-                            <div className="runs-stack">
-                              {runs.length === 0 ? (
-                                <div className="run-empty">
-                                  No runs recorded yet.
-                                </div>
-                              ) : (
-                                runs.map((run, index) => (
-                                  <details
-                                    key={`${methodKey}-run-${index}`}
-                                    className="run-panel"
-                                  >
-                                    <summary className="run-summary">
-                                      {getRunTimestamp(run, index)}
-                                    </summary>
-                                    <div className="run-body backend-explorer-run-body">
-                                      <div>
-                                        <div className="field-label">
-                                          Args
-                                        </div>
-                                        <pre className="run-pre">
-                                          {formatValue(run.args)}
-                                        </pre>
-                                      </div>
-
-                                      {"error" in run && run.error !== undefined ? (
-                                        <div>
-                                          <div className="field-label error-label">
-                                            Error
-                                          </div>
-                                          <pre className="run-pre error-pre">
-                                            {formatValue(run.error)}
-                                          </pre>
-                                        </div>
-                                      ) : (
-                                        <div>
-                                          <div className="field-label">
-                                            Response
-                                          </div>
-                                          <pre className="run-pre">
-                                            {formatValue(run.result ?? run.response)}
-                                          </pre>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </details>
-                                ))
+                          return (
+                            <Collapsible
+                              key={methodKey}
+                              meta={`${runs.length} runs`}
+                              style={styles.methodPanel}
+                              title={methodName}
+                            >
+                              {method.schema !== undefined && (
+                                <details style={styles.section}>
+                                  <summary style={styles.sectionSummary}>
+                                    Schema
+                                  </summary>
+                                  <pre style={{ ...styles.pre, ...styles.servicePre }}>
+                                    {formatValue(method.schema)}
+                                  </pre>
+                                </details>
                               )}
-                            </div>
-                          </details>
-                      </Collapsible>
-                    );
-                  })
-                )}
-            </Collapsible>
-          );
-        })
-      )}
+
+                              <div style={styles.section}>
+                                <div style={styles.inlineHeader}>
+                                  <h3 style={styles.subtitle}>Test</h3>
+                                  <button
+                                    disabled={!method.invokable}
+                                    onClick={() =>
+                                      void invokeMethod(
+                                        serviceName,
+                                        methodName,
+                                        methodKey,
+                                        method,
+                                      )}
+                                    style={{
+                                      ...styles.runButton,
+                                      ...(!method.invokable
+                                        ? styles.runButtonDisabled
+                                        : {}),
+                                    }}
+                                    type="button"
+                                  >
+                                    Run
+                                  </button>
+                                </div>
+
+                                <label style={styles.fieldLabel}>
+                                  Args
+                                </label>
+                                <div style={styles.formCaption}>
+                                  POST
+                                  {" "}
+                                  {endpoint}
+                                </div>
+                                <textarea
+                                  onChange={event =>
+                                    setArgsByMethod(current => ({
+                                      ...current,
+                                      [methodKey]: event.target.value,
+                                    }))}
+                                  placeholder={"{\n  \"example\": true\n}"}
+                                  spellCheck={false}
+                                  style={styles.textarea}
+                                  value={argsByMethod[methodKey] ?? ""}
+                                />
+
+                                <div style={styles.responseHeader}>
+                                  <label style={styles.fieldLabel}>
+                                    Response
+                                  </label>
+                                  <span style={styles.responseStatus}>
+                                    {statusByMethod[methodKey] ?? "Idle"}
+                                  </span>
+                                </div>
+                                <pre style={{ ...styles.pre, ...styles.responsePre }}>
+                                  {responseByMethod[methodKey] ?? "Run the method to see a response."}
+                                </pre>
+                              </div>
+
+                              <details style={styles.section}>
+                                <summary style={styles.sectionSummary}>
+                                  Runs
+                                </summary>
+
+                                <div style={styles.runsStack}>
+                                  {runs.length === 0
+                                    ? (
+                                        <div style={styles.runEmpty}>
+                                          No runs recorded yet.
+                                        </div>
+                                      )
+                                    : (
+                                        runs.map((run, index) => (
+                                          <details
+                                            key={`${methodKey}-run-${index}`}
+                                            style={styles.runPanel}
+                                          >
+                                            <summary style={styles.runSummary}>
+                                              {getRunTimestamp(run, index)}
+                                            </summary>
+                                            <div style={styles.runBody}>
+                                              <div>
+                                                <div style={styles.fieldLabel}>
+                                                  Args
+                                                </div>
+                                                <pre style={styles.pre}>
+                                                  {formatValue(run.args)}
+                                                </pre>
+                                              </div>
+
+                                              {"error" in run && run.error !== undefined
+                                                ? (
+                                                    <div>
+                                                      <div style={{ ...styles.fieldLabel, ...styles.errorLabel }}>
+                                                        Error
+                                                      </div>
+                                                      <pre style={{ ...styles.pre, ...styles.errorPre }}>
+                                                        {formatValue(run.error)}
+                                                      </pre>
+                                                    </div>
+                                                  )
+                                                : (
+                                                    <div>
+                                                      <div style={styles.fieldLabel}>
+                                                        Response
+                                                      </div>
+                                                      <pre style={styles.pre}>
+                                                        {formatValue(run.result ?? run.response)}
+                                                      </pre>
+                                                    </div>
+                                                  )}
+                                            </div>
+                                          </details>
+                                        ))
+                                      )}
+                                </div>
+                              </details>
+                            </Collapsible>
+                          );
+                        })
+                      )}
+                </Collapsible>
+              );
+            })
+          )}
     </section>
   );
 }

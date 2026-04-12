@@ -89,14 +89,16 @@ function setupUi(app: BlazyDefault, logsRepo: LogsRepo){
     .get({
       path: "/logs",
       handler: ctx => {
-        return HtmlResponse("<div>hi</div>")
+        // return HtmlResponse("<div>hi</div>")
         return HtmlResponse(renderToString(<LogsView app={ctx} logsRepo={logsRepo} />))
       },
       args: undefined 
     })
     .get({
       "path": "/services",
-      handler: () => HtmlResponse( renderToString(<ServicesUi services={app.services} />)),
+      handler: () => {
+        console.log("dd", app.services.services)
+        return HtmlResponse( renderToString(<ServicesUi services={app.services.services} />))},
       args: undefined
     })
 }
