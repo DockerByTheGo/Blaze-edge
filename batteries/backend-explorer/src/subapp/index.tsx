@@ -20,11 +20,10 @@ function isServiceMethod(value: unknown): value is ServiceMethod {
   return typeof value === "function";
 }
 
-function setupServerHandlers<TApp extends Blazy<unknown, unknown, unknown>>(app: TApp): TApp {
-  let modifiedApp = app;
+function setupServerHandlers<TApp extends BlazyDefault>(app: TApp) {
   // Add a catch-all POST route pattern for services
   // Pattern: /{serviceName}/{methodName}
-  modifiedApp = modifiedApp.post({
+  return app.post({
     path: "/:serviceName/:methodName",
     handeler: async (ctx: ServiceRouteContext) => {
       try {
@@ -78,9 +77,8 @@ function setupServerHandlers<TApp extends Blazy<unknown, unknown, unknown>>(app:
         };
       }
     },
-  }) as TApp;
+  });
   
-  return modifiedApp;
 }
 
 
@@ -89,16 +87,15 @@ function setupUi(app: BlazyDefault, logsRepo: LogsRepo){
     .get({
       path: "/logs",
       handler: ctx => {
-        // return HtmlResponse("<div>hi</div>")
         return HtmlResponse(renderToString(<LogsView app={ctx} logsRepo={logsRepo} />))
       },
       args: undefined 
     })
     .get({
       "path": "/services",
-      handler: () => {
-        console.log("dd", app.services.services)
-        return HtmlResponse( renderToString(<ServicesUi services={app.services.services} />))},
+      handler: ctx => {
+        console.log("dd",ctx.services)
+        return HtmlResponse( renderToString(<ServicesUi services={ctx.services} />))},
       args: undefined
     })
 }

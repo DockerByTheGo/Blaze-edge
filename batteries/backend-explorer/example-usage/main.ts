@@ -14,7 +14,7 @@ const res = await BlazyConstructor
 })
 .addService("cartService", cartService)
 .block(a => {
-    console.log(a)
+    console.log("ser", a.services)
     return a
 })
 .block(backendUi)
