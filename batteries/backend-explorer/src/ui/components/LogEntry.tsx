@@ -5,6 +5,7 @@ import { useObjectState } from "@blazytsts/utils_react-utils";
 import { useEffect, useMemo } from "react";
 
 import type { LogsRepo, WebSocketLogMessage } from "../../modules/logs-repo";
+import { Collapsible } from "./Collapsible";
 import { monospaceFont } from "../styles";
 
 type LogEntryProps = {
@@ -27,6 +28,15 @@ type ResponseDetails = {
   sentAt?: string | number | Date;
 };
 
+type HookRunLog = {
+  name?: string;
+  startTime?: string | number | Date;
+  endTime?: string | number | Date;
+  got?: unknown;
+  returned?: unknown;
+};
+
+type HooksLog = Record<string, HookRunLog[] | undefined>;
 
 const styles: Record<string, CSSProperties> = {
   entry: {
@@ -97,6 +107,26 @@ const styles: Record<string, CSSProperties> = {
   },
   detailSection: {
     marginBottom: 16,
+  },
+  hookCategory: {
+    background: "#111827",
+    border: "1px solid #334155",
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  hookRun: {
+    background: "#0f172a",
+    border: "1px solid #334155",
+    borderRadius: 6,
+    overflow: "hidden",
+  },
+  hookStack: {
+    display: "grid",
+    gap: 8,
+  },
+  hookEmpty: {
+    color: "#94a3b8",
+    padding: 4,
   },
   detailHeading: {
     color: "#38bdf8",
@@ -245,6 +275,57 @@ function getMethodBackground(method: string) {
   return backgrounds[method] || "#6b7280";
 }
 
+function formatValue(value: unknown): string {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  try {
+    return JSON.stringify(value, null, 2);
+  }
+  catch {
+    return String(value);
+  }
+}
+
+function formatTimestamp(value: HookRunLog["startTime"]): string {
+  if (!value) {
+    return "N/A";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
+  }
+
+  return date.toLocaleString();
+}
+
+function formatRunDuration(startTime: HookRunLog["startTime"], endTime: HookRunLog["endTime"]): string {
+  if (!startTime || !endTime) {
+    return "N/A";
+  }
+
+  const duration = new Date(endTime).getTime() - new Date(startTime).getTime();
+  if (Number.isNaN(duration)) {
+    return "N/A";
+  }
+
+  if (duration < 1000) {
+    return `${duration}ms`;
+  }
+
+  return `${(duration / 1000).toFixed(2)}s`;
+}
+
+function getHookEntries(hooks: unknown): Array<[string, HookRunLog[]]> {
+  return Object.entries((hooks ?? {}) as HooksLog)
+    .map(([hookType, runs]) => [
+      hookType,
+      Array.isArray(runs) ? runs : [],
+    ]);
+}
+
 const LogEntry: FC<LogEntryProps> = ({
   initialWebSocketMessages,
   log,
@@ -274,6 +355,7 @@ const LogEntry: FC<LogEntryProps> = ({
 
   const requestReceived = log.requestReceived as RequestDetails;
   const responseSent = log.responseSent as ResponseDetails;
+  const hookEntries = getHookEntries(log.hooks);
   const statusCode = responseSent.statusCode || 200;
   const method = requestReceived.method || "WS";
   const path = requestReceived.path || "";
@@ -336,6 +418,54 @@ const LogEntry: FC<LogEntryProps> = ({
               </div>
             )}
           </div>
+
+          {hookEntries.length > 0 && (
+            <div style={styles.detailSection}>
+              <h4 style={styles.detailHeading}>Hooks</h4>
+              <div style={styles.hookStack}>
+                {hookEntries.map(([hookType, hookRuns]) => (
+                  <Collapsible
+                    key={hookType}
+                    meta={`${hookRuns.length} ran`}
+                    style={styles.hookCategory}
+                    title={hookType}
+                  >
+                    {hookRuns.length === 0
+                      ? (
+                          <div style={styles.hookEmpty}>
+                            No hook runs recorded for this category.
+                          </div>
+                        )
+                      : hookRuns.map((hookRun, index) => (
+                          <Collapsible
+                            key={`${hookType}-${hookRun.name ?? "hook"}-${index}`}
+                            meta={formatRunDuration(hookRun.startTime, hookRun.endTime)}
+                            style={styles.hookRun}
+                            title={hookRun.name ?? `Hook ${index + 1}`}
+                          >
+                            <div style={styles.detailRow}>
+                              <span style={styles.detailLabel}>Started:</span>
+                              <span style={styles.detailValue}>{formatTimestamp(hookRun.startTime)}</span>
+                            </div>
+                            <div style={styles.detailRow}>
+                              <span style={styles.detailLabel}>Ended:</span>
+                              <span style={styles.detailValue}>{formatTimestamp(hookRun.endTime)}</span>
+                            </div>
+                            <div style={styles.detailRow}>
+                              <span style={styles.detailLabel}>Got:</span>
+                              <code style={styles.codeBlock}>{formatValue(hookRun.got ?? {})}</code>
+                            </div>
+                            <div style={styles.detailRow}>
+                              <span style={styles.detailLabel}>Returned:</span>
+                              <code style={styles.codeBlock}>{formatValue(hookRun.returned ?? {})}</code>
+                            </div>
+                          </Collapsible>
+                        ))}
+                  </Collapsible>
+                ))}
+              </div>
+            </div>
+          )}
 
           {log.connectionId && wsMessages.state && (
             <div style={styles.detailSection}>

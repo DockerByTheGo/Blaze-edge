@@ -3,8 +3,8 @@ import type React from "react";
 import type { MethodDescriptor, RunEntry, ServiceViewState } from "./types";
 
 import { logsRefreshEventName } from "../../logs";
+import { Collapsible } from "../../../components/Collapsible";
 import { styles } from "../styles";
-import { Collapsible } from "./Collapsible";
 import { formatValue } from "./utils";
 
 function isBrowser(): boolean {

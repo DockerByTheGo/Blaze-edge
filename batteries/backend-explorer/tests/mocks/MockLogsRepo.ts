@@ -21,8 +21,31 @@ export class MockLogsRepo implements LogsRepo {
         sentAt: new Date(Date.now() - 59955),
       },
       hooks: {
-        beforeHandler: [],
-        afterHandler: [],
+        beforeHandler: [
+          {
+            name: 'attachServices',
+            startTime: new Date(Date.now() - 60020),
+            endTime: new Date(Date.now() - 60012),
+            got: { method: 'GET', path: '/api/users' },
+            returned: { services: ['cartService'] },
+          },
+          {
+            name: 'authGuard',
+            startTime: new Date(Date.now() - 60010),
+            endTime: new Date(Date.now() - 60003),
+            got: { userId: 'user-1' },
+            returned: { authorized: true },
+          },
+        ],
+        afterHandler: [
+          {
+            name: 'responseLogger',
+            startTime: new Date(Date.now() - 59958),
+            endTime: new Date(Date.now() - 59955),
+            got: { statusCode: 200 },
+            returned: { logged: true },
+          },
+        ],
       },
     },
     {
@@ -40,8 +63,24 @@ export class MockLogsRepo implements LogsRepo {
         sentAt: new Date(Date.now() - 44880),
       },
       hooks: {
-        beforeHandler: [],
-        afterHandler: [],
+        beforeHandler: [
+          {
+            name: 'attachServices',
+            startTime: new Date(Date.now() - 45020),
+            endTime: new Date(Date.now() - 45012),
+            got: { method: 'POST', path: '/api/users' },
+            returned: { services: ['cartService'] },
+          },
+        ],
+        afterHandler: [
+          {
+            name: 'responseLogger',
+            startTime: new Date(Date.now() - 44884),
+            endTime: new Date(Date.now() - 44880),
+            got: { statusCode: 201 },
+            returned: { logged: true },
+          },
+        ],
       },
     },
     {
@@ -58,7 +97,15 @@ export class MockLogsRepo implements LogsRepo {
         sentAt: new Date(Date.now() - 119990),
       },
       hooks: {
-        beforeHandler: [],
+        beforeHandler: [
+          {
+            name: 'websocketUpgradeGuard',
+            startTime: new Date(Date.now() - 120020),
+            endTime: new Date(Date.now() - 120010),
+            got: { upgrade: 'websocket' },
+            returned: { allowed: true },
+          },
+        ],
         afterHandler: [],
       },
       connectionId: 'conn-001',

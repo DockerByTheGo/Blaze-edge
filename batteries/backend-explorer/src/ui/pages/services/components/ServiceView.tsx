@@ -3,8 +3,8 @@ import type { FC } from "react";
 
 import type { MethodDescriptor, RunEntry, ServiceViewState } from "./types";
 
+import { Collapsible } from "../../../components/Collapsible";
 import { styles } from "../styles";
-import { Collapsible } from "./Collapsible";
 import { ServiceMEthodView } from "./ServiceMethodView";
 
 type ServiceViewProps = {
