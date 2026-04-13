@@ -1,5 +1,5 @@
 import { BlazyConstructor } from "@blazyts/blazy-edge";
-import { backendUi } from "../src/subapp";
+import { backendUiMiddleware } from "../src/variations/subapp";
 
 const cartService = {
     config: {},
@@ -15,7 +15,7 @@ const res = await BlazyConstructor
 .block(a => {
     return a
 })
-.block(backendUi)
+.block(backendUiMiddleware)
 .get({
     path: "/hi",
     handler: ctx => ctx.services.cartService.getAll(),

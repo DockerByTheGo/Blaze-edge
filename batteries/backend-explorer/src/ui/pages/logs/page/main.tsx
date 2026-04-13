@@ -1,13 +1,14 @@
 import type { BlazyDefault, Log } from "@blazyts/blazy-edge";
-import type { CSSProperties, FC } from "react";
+import type { FC } from "react";
 
 import { useObjectState } from "@blazytsts/utils_react-utils";
 import { useEffect, useMemo } from "react";
 
-import type { LogsRepo } from "../../../../logs-repo";
+import type { LogsRepo, WebSocketLogMessage } from "../../../../modules/logs-repo";
 
 import LogFilters from "../../../components/LogFilters";
 import LogViewer from "../../../components/LogViewer";
+import { styles } from "../styles";
 
 export const logsRefreshEventName = "backend-explorer:service-action";
 
@@ -21,7 +22,9 @@ type FiltersState = {
 
 type LogsViewProps = {
   app: BlazyDefault;
+  initialLogs?: Log[];
   logsRepo: LogsRepo;
+  websocketMessagesByConnectionId?: Record<string, WebSocketLogMessage[]>;
   action?: unknown;
 };
 
@@ -31,67 +34,6 @@ const initialFilters: FiltersState = {
   statusCode: "",
   protocol: "",
   searchTerm: "",
-};
-
-const styles: Record<string, CSSProperties> = {
-  page: {
-    background: "#020617",
-    boxSizing: "border-box",
-    color: "#f1f5f9",
-    minHeight: "100vh",
-    padding: "32px 24px",
-  },
-  shell: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 24,
-    margin: "0 auto",
-    maxWidth: 1152,
-    width: "100%",
-  },
-  header: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 8,
-  },
-  eyebrow: {
-    color: "#7dd3fc",
-    fontSize: 14,
-    fontWeight: 500,
-    letterSpacing: "0.08em",
-    margin: 0,
-    textTransform: "uppercase",
-  },
-  titleRow: {
-    alignItems: "flex-end",
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 16,
-    justifyContent: "space-between",
-  },
-  title: {
-    color: "#fff",
-    fontSize: 30,
-    fontWeight: 600,
-    margin: 0,
-  },
-  description: {
-    color: "#94a3b8",
-    fontSize: 14,
-    margin: "8px 0 0",
-  },
-  count: {
-    background: "#0f172a",
-    border: "1px solid #334155",
-    borderRadius: 6,
-    color: "#cbd5e1",
-    fontSize: 14,
-    padding: "8px 12px",
-  },
-  status: {
-    color: "#64748b",
-    fontSize: 12,
-  },
 };
 
 function getLogMethod(log: Log): string {
@@ -151,13 +93,15 @@ function filterLogs(logs: Log[], filters: FiltersState): Log[] {
 }
 
 export const LogsView: FC<LogsViewProps> = ({
+  initialLogs = [],
   logsRepo,
+  websocketMessagesByConnectionId = {},
   action,
 }) => {
   const filters = useObjectState<FiltersState>(initialFilters);
-  const logs = useObjectState<Log[]>([]);
+  const logs = useObjectState<Log[]>(initialLogs);
   const refreshCount = useObjectState(0);
-  const status = useObjectState("Idle");
+  const status = useObjectState(initialLogs.length > 0 ? "Loaded" : "Idle");
   const sourceLogs = logs.state;
   const filteredLogs = useMemo(
     () => filterLogs(sourceLogs, filters.state),
@@ -227,7 +171,11 @@ export const LogsView: FC<LogsViewProps> = ({
         </header>
 
         <LogFilters filters={filters.state} onFiltersChange={filters.set} />
-        <LogViewer logs={filteredLogs} />
+        <LogViewer
+          logs={filteredLogs}
+          logsRepo={logsRepo}
+          websocketMessagesByConnectionId={websocketMessagesByConnectionId}
+        />
       </section>
     </main>
   );

@@ -11,10 +11,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@blazytsts/utils_react-utils": "workspace:*",
     "@blazyts/better-standard-library": "workspace:*",
     "@blazyts/blazy-edge": "workspace:*",
-    "@types/bun": "latest",
+    "@blazytsts/utils_react-utils": "workspace:*",
+    "@types/bun": "^1.3.12",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

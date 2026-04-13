@@ -1,11 +1,8 @@
 import type { Log } from '@blazyts/blazy-edge'
-import type { LogsRepo } from './index'
+import type { LogsRepo, WebSocketLogMessage } from '../../src/modules/logs-repo'
 
-export type WebSocketLogMessage = {
+type StoredWebSocketLogMessage = WebSocketLogMessage & {
   connectionId: string
-  type: 'sent' | 'received'
-  data: unknown
-  timestamp: Date
 }
 
 export class MockLogsRepo implements LogsRepo {
@@ -68,8 +65,7 @@ export class MockLogsRepo implements LogsRepo {
     },
   ]
 
-  // Example websocket messages for the connection
-  private wsMessages: WebSocketLogMessage[] = [
+  private wsMessages: StoredWebSocketLogMessage[] = [
     {
       connectionId: 'conn-001',
       type: 'received',
@@ -96,7 +92,6 @@ export class MockLogsRepo implements LogsRepo {
     },
   ]
 
-
   async getRequestLog(id: string): Promise<Log | null> {
     return this.logs.find(log => log.requestId === id) || null
   }
@@ -113,9 +108,10 @@ export class MockLogsRepo implements LogsRepo {
     )
   }
 
-  async getWebSocketMessages(connectionId: string): Promise<Array<Omit<WebSocketLogMessage, 'connectionId'>>> {
+  async getWebSocketMessages(connectionId: string): Promise<WebSocketLogMessage[]> {
     return this.wsMessages
       .filter(msg => msg.connectionId === connectionId)
+      .map(({ connectionId: _connectionId, ...message }) => message)
       .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
   }
 

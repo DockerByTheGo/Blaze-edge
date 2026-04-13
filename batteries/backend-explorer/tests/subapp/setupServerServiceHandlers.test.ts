@@ -1,7 +1,7 @@
 import { BlazyConstructor } from "@blazyts/blazy-edge";
 import { describe, expect, it } from "bun:test";
 
-import { setupServerHandlers } from "../../src/subapp/setupServerServiceHandlers";
+import { setupServerHandlers } from "../../src/modules/setupServerServiceHandlers";
 
 describe("setupServerHandlers", () => {
   it("registers the dynamic service method POST route in app.routes", async () => {

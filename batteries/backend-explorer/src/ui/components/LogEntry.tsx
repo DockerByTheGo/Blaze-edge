@@ -4,17 +4,13 @@ import type { CSSProperties, FC } from "react";
 import { useObjectState } from "@blazytsts/utils_react-utils";
 import { useEffect, useMemo } from "react";
 
-import { MockLogsRepo } from "../../logs-repo/MockLogsRepo";
+import type { LogsRepo, WebSocketLogMessage } from "../../modules/logs-repo";
 import { monospaceFont } from "../styles";
 
 type LogEntryProps = {
   log: Log;
-};
-
-type WebSocketMessage = {
-  type: "sent" | "received";
-  data: unknown;
-  timestamp: Date;
+  logsRepo: LogsRepo;
+  initialWebSocketMessages: WebSocketLogMessage[] | null;
 };
 
 type RequestDetails = {
@@ -249,16 +245,18 @@ function getMethodBackground(method: string) {
   return backgrounds[method] || "#6b7280";
 }
 
-const LogEntry: FC<LogEntryProps> = ({ log }) => {
-  const expanded = useObjectState(false);
-  const wsMessages = useObjectState<WebSocketMessage[] | null>(null);
+const LogEntry: FC<LogEntryProps> = ({
+  initialWebSocketMessages,
+  log,
+  logsRepo,
+}) => {
+  const wsMessages = useObjectState<WebSocketLogMessage[] | null>(initialWebSocketMessages);
   const wsFilter = useObjectState<"all" | "received" | "sent">("all");
   useEffect(() => {
-    if (log.connectionId) {
-      const repo = new MockLogsRepo();
-      repo.getWebSocketMessages(log.connectionId).then(wsMessages.set);
+    if (!initialWebSocketMessages && log.connectionId && logsRepo.getWebSocketMessages) {
+      logsRepo.getWebSocketMessages(log.connectionId).then(wsMessages.set);
     }
-  }, [log.connectionId]);
+  }, [initialWebSocketMessages, log.connectionId, logsRepo]);
 
   const filteredWsMessages = useMemo(() => {
     if (!wsMessages.state)
@@ -286,19 +284,17 @@ const LogEntry: FC<LogEntryProps> = ({ log }) => {
     : 0;
 
   return (
-    <div style={styles.entry}>
-      <div style={styles.summary} onClick={() => expanded.set(current => !current)}>
+    <details style={styles.entry}>
+      <summary style={styles.summary}>
         <span style={{ ...styles.badge, ...styles.statusBadge, background: getStatusBackground(statusCode) }}>{statusCode}</span>
         <span style={{ ...styles.badge, ...styles.methodBadge, background: getMethodBackground(method) }}>{method}</span>
         <span style={styles.path}>{path}</span>
         <span style={styles.protocol}>{protocol}</span>
         <span style={styles.time}>{new Date(timestamp).toLocaleTimeString()}</span>
         <span style={styles.duration}>{formatDuration(duration)}</span>
-        <span style={styles.chevron}>{expanded.state ? "▼" : "▶"}</span>
-      </div>
+      </summary>
 
-      {expanded.state && (
-        <div style={styles.details}>
+      <div style={styles.details}>
           <div style={styles.detailSection}>
             <h4 style={styles.detailHeading}>Request</h4>
             <div style={styles.detailRow}>
@@ -418,9 +414,8 @@ const LogEntry: FC<LogEntryProps> = ({ log }) => {
               </div>
             )}
           </div>
-        </div>
-      )}
-    </div>
+      </div>
+    </details>
   );
 };
 
