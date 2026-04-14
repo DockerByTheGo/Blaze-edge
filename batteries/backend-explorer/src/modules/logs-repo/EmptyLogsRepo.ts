@@ -1,12 +1,11 @@
-import type { Log } from '@blazyts/blazy-edge'
-import type { LogsRepo, WebSocketLogMessage } from './index'
+import type { ExplorerLog, LogsRepo, WebSocketLogMessage } from './index'
 
 export class EmptyLogsRepo implements LogsRepo {
-  async getRequestLog(_id: string): Promise<Log | null> {
+  async getRequestLog(_id: string): Promise<ExplorerLog | null> {
     return null
   }
 
-  async getAllLogs(): Promise<Log[]> {
+  async getAllLogs(): Promise<ExplorerLog[]> {
     return []
   }
 
@@ -14,7 +13,7 @@ export class EmptyLogsRepo implements LogsRepo {
     return []
   }
 
-  async addLog(_log: Log): Promise<void> {}
+  async addLog(_log: ExplorerLog): Promise<void> {}
 
   async clearLogs(): Promise<void> {}
 }

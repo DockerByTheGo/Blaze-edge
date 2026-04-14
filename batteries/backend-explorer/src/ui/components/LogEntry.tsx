@@ -1,15 +1,14 @@
-import type { Log } from "@blazyts/blazy-edge";
 import type { CSSProperties, FC } from "react";
 
 import { useObjectState } from "@blazytsts/utils_react-utils";
 import { useEffect, useMemo } from "react";
 
-import type { LogsRepo, WebSocketLogMessage } from "../../modules/logs-repo";
+import type { ExplorerLog, LogsRepo, WebSocketLogMessage } from "../../modules/logs-repo";
 import { Collapsible } from "./Collapsible";
 import { monospaceFont } from "../styles";
 
 type LogEntryProps = {
-  log: Log;
+  log: ExplorerLog;
   logsRepo: LogsRepo;
   initialWebSocketMessages: WebSocketLogMessage[] | null;
 };
@@ -37,6 +36,12 @@ type HookRunLog = {
 };
 
 type HooksLog = Record<string, HookRunLog[] | undefined>;
+
+type ServiceRunLog = HookRunLog & {
+  method?: string;
+};
+
+type GroupedServiceLogs = Array<[string, ServiceRunLog[]]>;
 
 const styles: Record<string, CSSProperties> = {
   entry: {
@@ -127,6 +132,18 @@ const styles: Record<string, CSSProperties> = {
   hookEmpty: {
     color: "#94a3b8",
     padding: 4,
+  },
+  serviceCategory: {
+    background: "#111827",
+    border: "1px solid #334155",
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  serviceRun: {
+    background: "#0f172a",
+    border: "1px solid #334155",
+    borderRadius: 6,
+    overflow: "hidden",
   },
   detailHeading: {
     color: "#38bdf8",
@@ -288,6 +305,14 @@ function formatValue(value: unknown): string {
   }
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function hasValue(value: unknown): boolean {
+  return value !== null && value !== undefined;
+}
+
 function formatTimestamp(value: HookRunLog["startTime"]): string {
   if (!value) {
     return "N/A";
@@ -326,6 +351,20 @@ function getHookEntries(hooks: unknown): Array<[string, HookRunLog[]]> {
     ]);
 }
 
+function groupServiceLogs(log: ExplorerLog): GroupedServiceLogs {
+  const serviceLogs = log.serviceLogs ?? log.services ?? [];
+  const grouped = new Map<string, ServiceRunLog[]>();
+
+  for (const serviceLog of serviceLogs) {
+    const serviceName = serviceLog.name || "Unknown service";
+    const runs = grouped.get(serviceName) ?? [];
+    runs.push(serviceLog);
+    grouped.set(serviceName, runs);
+  }
+
+  return [...grouped.entries()];
+}
+
 const LogEntry: FC<LogEntryProps> = ({
   initialWebSocketMessages,
   log,
@@ -356,6 +395,7 @@ const LogEntry: FC<LogEntryProps> = ({
   const requestReceived = log.requestReceived as RequestDetails;
   const responseSent = log.responseSent as ResponseDetails;
   const hookEntries = getHookEntries(log.hooks);
+  const serviceEntries = groupServiceLogs(log);
   const statusCode = responseSent.statusCode || 200;
   const method = requestReceived.method || "WS";
   const path = requestReceived.path || "";
@@ -387,13 +427,13 @@ const LogEntry: FC<LogEntryProps> = ({
               <span style={styles.detailLabel}>Path:</span>
               <span style={styles.detailValue}>{path}</span>
             </div>
-            {log.requestReceived?.headers && (
+            {hasValue(log.requestReceived?.headers) && (
               <div style={styles.detailRow}>
                 <span style={styles.detailLabel}>Headers:</span>
                 <code style={styles.codeBlock}>{JSON.stringify(log.requestReceived.headers, null, 2)}</code>
               </div>
             )}
-            {log.requestReceived?.body && (
+            {hasValue(log.requestReceived?.body) && (
               <div style={styles.detailRow}>
                 <span style={styles.detailLabel}>Body:</span>
                 <code style={styles.codeBlock}>{JSON.stringify(log.requestReceived.body, null, 2)}</code>
@@ -411,7 +451,7 @@ const LogEntry: FC<LogEntryProps> = ({
               <span style={styles.detailLabel}>Duration:</span>
               <span style={styles.detailValue}>{formatDuration(duration)}</span>
             </div>
-            {log.responseSent?.body && (
+            {hasValue(log.responseSent?.body) && (
               <div style={styles.detailRow}>
                 <span style={styles.detailLabel}>Body:</span>
                 <code style={styles.codeBlock}>{JSON.stringify(log.responseSent.body, null, 2)}</code>
@@ -467,6 +507,48 @@ const LogEntry: FC<LogEntryProps> = ({
             </div>
           )}
 
+          {serviceEntries.length > 0 && (
+            <div style={styles.detailSection}>
+              <h4 style={styles.detailHeading}>Services</h4>
+              <div style={styles.hookStack}>
+                {serviceEntries.map(([serviceName, serviceRuns]) => (
+                  <Collapsible
+                    key={serviceName}
+                    meta={`${serviceRuns.length} calls`}
+                    style={styles.serviceCategory}
+                    title={serviceName}
+                  >
+                    {serviceRuns.map((serviceRun, index) => (
+                      <Collapsible
+                        key={`${serviceName}-${serviceRun.method ?? "method"}-${index}`}
+                        meta={formatRunDuration(serviceRun.startTime, serviceRun.endTime)}
+                        style={styles.serviceRun}
+                        title={serviceRun.method ?? `Call ${index + 1}`}
+                      >
+                        <div style={styles.detailRow}>
+                          <span style={styles.detailLabel}>Started:</span>
+                          <span style={styles.detailValue}>{formatTimestamp(serviceRun.startTime)}</span>
+                        </div>
+                        <div style={styles.detailRow}>
+                          <span style={styles.detailLabel}>Ended:</span>
+                          <span style={styles.detailValue}>{formatTimestamp(serviceRun.endTime)}</span>
+                        </div>
+                        <div style={styles.detailRow}>
+                          <span style={styles.detailLabel}>Got:</span>
+                          <code style={styles.codeBlock}>{formatValue(serviceRun.got ?? {})}</code>
+                        </div>
+                        <div style={styles.detailRow}>
+                          <span style={styles.detailLabel}>Returned:</span>
+                          <code style={styles.codeBlock}>{formatValue(serviceRun.returned ?? {})}</code>
+                        </div>
+                      </Collapsible>
+                    ))}
+                  </Collapsible>
+                ))}
+              </div>
+            </div>
+          )}
+
           {log.connectionId && wsMessages.state && (
             <div style={styles.detailSection}>
               <h4 style={styles.detailHeading}>
@@ -510,7 +592,7 @@ const LogEntry: FC<LogEntryProps> = ({
                         </span>
                         <span style={styles.mutedCopy}>{new Date(msg.timestamp).toLocaleTimeString()}</span>
                       </div>
-                      {msg.data && Object.keys(msg.data).length > 0 && (
+                      {isRecord(msg.data) && Object.keys(msg.data).length > 0 && (
                         <code style={styles.codeBlock}>{JSON.stringify(msg.data, null, 2)}</code>
                       )}
                     </div>

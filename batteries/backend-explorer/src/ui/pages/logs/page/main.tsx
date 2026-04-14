@@ -1,10 +1,10 @@
-import type { BlazyDefault, Log } from "@blazyts/blazy-edge";
+import type { BlazyDefault } from "@blazyts/blazy-edge";
 import type { FC } from "react";
 
 import { useObjectState } from "@blazytsts/utils_react-utils";
 import { useEffect, useMemo } from "react";
 
-import type { LogsRepo, WebSocketLogMessage } from "../../../../modules/logs-repo";
+import type { ExplorerLog, LogsRepo, WebSocketLogMessage } from "../../../../modules/logs-repo";
 
 import LogFilters from "../../../components/LogFilters";
 import LogViewer from "../../../components/LogViewer";
@@ -22,7 +22,7 @@ type FiltersState = {
 
 type LogsViewProps = {
   app: BlazyDefault;
-  initialLogs?: Log[];
+  initialLogs?: ExplorerLog[];
   logsRepo: LogsRepo;
   websocketMessagesByConnectionId?: Record<string, WebSocketLogMessage[]>;
   action?: unknown;
@@ -36,19 +36,19 @@ const initialFilters: FiltersState = {
   searchTerm: "",
 };
 
-function getLogMethod(log: Log): string {
+function getLogMethod(log: ExplorerLog): string {
   return String((log.requestReceived as { method?: unknown }).method ?? "");
 }
 
-function getLogPath(log: Log): string {
+function getLogPath(log: ExplorerLog): string {
   return String((log.requestReceived as { path?: unknown }).path ?? "");
 }
 
-function getLogStatusCode(log: Log): string {
+function getLogStatusCode(log: ExplorerLog): string {
   return String((log.responseSent as { statusCode?: unknown }).statusCode ?? "");
 }
 
-function getLogProtocol(log: Log): string {
+function getLogProtocol(log: ExplorerLog): string {
   const headers = (log.requestReceived as { headers?: Record<string, unknown> })
     .headers;
   const upgrade = String(headers?.Upgrade ?? headers?.upgrade ?? "");
@@ -56,7 +56,7 @@ function getLogProtocol(log: Log): string {
   return upgrade.toLowerCase() === "websocket" ? "WS" : "HTTP";
 }
 
-function formatLogForSearch(log: Log): string {
+function formatLogForSearch(log: ExplorerLog): string {
   try {
     return JSON.stringify(log).toLowerCase();
   }
@@ -65,7 +65,7 @@ function formatLogForSearch(log: Log): string {
   }
 }
 
-function filterLogs(logs: Log[], filters: FiltersState): Log[] {
+function filterLogs(logs: ExplorerLog[], filters: FiltersState): ExplorerLog[] {
   const searchTerm = filters.searchTerm.trim().toLowerCase();
   const path = filters.path.trim().toLowerCase();
 
@@ -99,7 +99,7 @@ export const LogsView: FC<LogsViewProps> = ({
   action,
 }) => {
   const filters = useObjectState<FiltersState>(initialFilters);
-  const logs = useObjectState<Log[]>(initialLogs);
+  const logs = useObjectState<ExplorerLog[]>(initialLogs);
   const refreshCount = useObjectState(0);
   const status = useObjectState(initialLogs.length > 0 ? "Loaded" : "Idle");
   const sourceLogs = logs.state;

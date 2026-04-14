@@ -1,12 +1,11 @@
-import type { Log } from '@blazyts/blazy-edge'
-import type { LogsRepo, WebSocketLogMessage } from '../../src/modules/logs-repo'
+import type { ExplorerLog, LogsRepo, WebSocketLogMessage } from '../../src/modules/logs-repo'
 
 type StoredWebSocketLogMessage = WebSocketLogMessage & {
   connectionId: string
 }
 
 export class MockLogsRepo implements LogsRepo {
-  private logs: Log[] = [
+  private logs: ExplorerLog[] = [
     {
       requestId: '1',
       requestReceived: {
@@ -47,6 +46,24 @@ export class MockLogsRepo implements LogsRepo {
           },
         ],
       },
+      serviceLogs: [
+        {
+          name: 'cartService',
+          method: 'getAll',
+          startTime: new Date(Date.now() - 59990),
+          endTime: new Date(Date.now() - 59976),
+          got: { filter: 'active' },
+          returned: ['cart 1', 'cart 2', 'cart 3'],
+        },
+        {
+          name: 'userService',
+          method: 'getAll',
+          startTime: new Date(Date.now() - 59974),
+          endTime: new Date(Date.now() - 59960),
+          got: { includeInactive: false },
+          returned: { users: ['John', 'Jane'] },
+        },
+      ],
     },
     {
       requestId: '2',
@@ -82,6 +99,16 @@ export class MockLogsRepo implements LogsRepo {
           },
         ],
       },
+      serviceLogs: [
+        {
+          name: 'userService',
+          method: 'create',
+          startTime: new Date(Date.now() - 44980),
+          endTime: new Date(Date.now() - 44910),
+          got: { name: 'John Doe', email: 'john@example.com' },
+          returned: { id: 'user123', name: 'John Doe', email: 'john@example.com' },
+        },
+      ],
     },
     {
       requestId: 'ws-1',
@@ -108,6 +135,16 @@ export class MockLogsRepo implements LogsRepo {
         ],
         afterHandler: [],
       },
+      serviceLogs: [
+        {
+          name: 'notificationsService',
+          method: 'subscribe',
+          startTime: new Date(Date.now() - 119980),
+          endTime: new Date(Date.now() - 119950),
+          got: { channel: 'notifications' },
+          returned: { subscriptionId: 'sub-001' },
+        },
+      ],
       connectionId: 'conn-001',
     },
   ]
@@ -139,15 +176,15 @@ export class MockLogsRepo implements LogsRepo {
     },
   ]
 
-  async getRequestLog(id: string): Promise<Log | null> {
+  async getRequestLog(id: string): Promise<ExplorerLog | null> {
     return this.logs.find(log => log.requestId === id) || null
   }
 
-  async getAllLogs(): Promise<Log[]> {
+  async getAllLogs(): Promise<ExplorerLog[]> {
     return this.getAllLogsSnapshot()
   }
 
-  getAllLogsSnapshot(): Log[] {
+  getAllLogsSnapshot(): ExplorerLog[] {
     return [...this.logs].sort(
       (a, b) =>
         new Date(b.requestReceived.recievedAt).getTime() -
@@ -162,7 +199,7 @@ export class MockLogsRepo implements LogsRepo {
       .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
   }
 
-  async addLog(log: Log): Promise<void> {
+  async addLog(log: ExplorerLog): Promise<void> {
     this.logs.push(log)
   }
 

@@ -1,12 +1,11 @@
-import type { Log } from "@blazyts/blazy-edge";
 import type { CSSProperties, FC } from "react";
 
-import type { LogsRepo, WebSocketLogMessage } from "../../modules/logs-repo";
+import type { ExplorerLog, LogsRepo, WebSocketLogMessage } from "../../modules/logs-repo";
 
 import LogEntry from "./LogEntry";
 
 type LogViewerProps = {
-  logs: Log[];
+  logs: ExplorerLog[];
   logsRepo: LogsRepo;
   websocketMessagesByConnectionId: Record<string, WebSocketLogMessage[]>;
 };
