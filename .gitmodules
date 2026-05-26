@@ -1,3 +1,6 @@
 [submodule "framework"]
 	path = framework
 	url = https://github.com/DockerByTheGo/blazy-edge-framework.git
+[submodule "batteries/explorer"]
+	path = batteries/explorer
+	url = https://RadoslavTsvetanov@github.com/DockerByTheGo/blazy-edge-batteries-backend-framework.git
