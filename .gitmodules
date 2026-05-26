@@ -4,3 +4,6 @@
 [submodule "batteries/explorer"]
 	path = batteries/explorer
 	url = https://RadoslavTsvetanov@github.com/DockerByTheGo/blazy-edge-batteries-backend-framework.git
+[submodule "batteries/auth"]
+	path = batteries/auth
+	url = https://RadoslavTsvetanov@github.com/DockerByTheGo/blazy-edge-batteries-authentication.git
