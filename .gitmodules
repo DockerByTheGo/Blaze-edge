@@ -7,3 +7,6 @@
 [submodule "batteries/auth"]
 	path = batteries/auth
 	url = https://RadoslavTsvetanov@github.com/DockerByTheGo/blazy-edge-batteries-authentication.git
+[submodule "batteries/file-upload"]
+	path = batteries/file-upload
+	url = https://RadoslavTsvetanov@github.com/DockerByTheGo/blazy-edge-batteries-file-saving.git
