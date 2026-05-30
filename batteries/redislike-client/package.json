@@ -1,0 +1,23 @@
+{
+  "name": "@blazyts/batteries-redislike-client",
+  "module": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "bun x --bun vitest run --configLoader runner --config vitest.config.ts"
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "^24.10.1",
+    "vitest": "^4.0.14"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
