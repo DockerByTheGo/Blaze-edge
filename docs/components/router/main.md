@@ -276,7 +276,7 @@ beforeHandler().map(result => {
    :  handler(res),map(result =>
       ctx.confg.NoImplicitResponse.get() 
       ? result.isResponse 
-        ? sendResponse(result) /* internally sets the ctx.response object to the sent response */ -> afterResponse and afterHandler Hooks fire  -> afterHandlerHooks.forEach(hook => hook(result).ifNoResponseIsSent(result => result.isResponse ? sendResponse(result) : result))
+        ? sendResponse(result) /* internally stores the sent response */ -> afterResponse and afterHandler Hooks fire  -> afterHandlerHooks.forEach(hook => hook(result).ifNoResponseIsSent(result => result.isResponse ? sendResponse(result) : result))
         : afterHandlerHooks.forEach(hook => hook(result).ifNoResponseIsSent(result => result.isResponse ? sendResponse(result) : result))
       : result
    ) 

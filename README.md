@@ -1,80 +1,65 @@
-# Name
+# Blazy Edge
 
-@blazy/http-stack
+Blazy Edge is a TypeScript backend framework workspace plus a set of optional batteries for auth, caching, file storage, Redis-like persistence, and backend exploration.
 
-# Hooks
+The core package is `@blazyts/blazy-edge`. Batteries are small packages that implement framework service contracts or add supporting tooling.
 
-## temlpate
+## Packages
 
-this is a hook which allows you to define layouts for all html/jsx type responses
+| Package | Purpose |
+| --- | --- |
+| `@blazyts/blazy-edge` | Core app, routing, hooks, services, HTTP/RPC/WebSocket helpers, and Bun server adapter. |
+| `@blazyts/batteries-authentication-self-hosted` | Username/password auth with PostgreSQL users and memory/Postgres/Redis token storage. |
+| `@blazyts/batteries-authentication-clerk` | Clerk-backed implementation of the Blazy auth service contract. |
+| `@blazyts/batteries-authentication-google` | Google OAuth-style auth battery with a local token store. |
+| `@blazyts/batteries-cache-in-memory` | In-process cache service implementation. |
+| `@blazyts/batteries-cache-redis` | Redis-backed cache service implementation. |
+| `@blazyts/batteries-redislike-client` | Typed JSON helper around Redis-compatible clients. |
+| `@blazyts/batteries-file-upload-multer` | Local filesystem file saver and Multer storage engine. |
+| `@blazyts/batteries-file-upload-s3` | S3-backed file saver. |
+| `@blazyts/backend-explorer` | React UI and server helpers for exploring Blazy services and logs. |
 
-For exmaple you have two routes which return html and you want to wrap them in a layout
-
-```ts
-app.use(template((ctx) => { // you have access to the whole context if you need to do some logic before rendering, for example
-
-    return <Layout class=`${ctx.res.statusCode.isSuccess() ? "bg-green-500" : "bg-red-500"}`>{ctx.body}</Layout>
-}))
-// if you wish a simpler function where you do not make any computation you can also use
-
-app.use(simpleTemplate(`
-
-  <Layout>{body}</Layout>
-
-`)) // this is our custom template engine called simple template where your response will be placed wherver body is typed
-
-// Note: this might lead to xss vulnerabilities if you do not sanitize your inputs
-
-app.get("/", () => <div>hello</div>)
-
-app.get("/about", () => <div>about</div>)
-
-```
-
-They can also be stacked
+## Quick Start
 
 ```ts
-app.use(template(ctx => {
+import { BlazyConstructor } from "@blazyts/blazy-edge";
 
-  return <div>{ctx.body}</div>
-}))
+export const app = BlazyConstructor
+  .createProd()
+  .get({
+    path: "/health",
+    handler: () => ({ body: { ok: true } }),
+  })
+  .post({
+    path: "/echo",
+    handler: ctx => ({ body: ctx.request.body.raw() }),
+  });
 
-app.use(template(ctx => {
-
-  return <div>{ctx.body}</div>
-}))
-
-app.use(simpleTemplate(`
-
-  <Layout>{body}</Layout>
-
-`))
-
-app.get("/", () => <div>hello</div>)
-
-app.get("/about", () => <div>about</div>)
+app.listen(3000);
 ```
 
-hitting / will return
+Services are attached with `addService()` and become available in route handlers through `ctx.services`.
 
-```html
-<div>
-  <div>
-    <Layout>
-      <div>hello</div>
-    </Layout>
-  </div>
-</div>
+```ts
+const app = BlazyConstructor
+  .createProd()
+  .addService("cart", {
+    config: {},
+    getAll: () => ["cart-1", "cart-2"],
+  })
+  .get({
+    path: "/cart",
+    handler: ctx => ({ body: ctx.services.cart.getAll() }),
+  });
 ```
-#
-# Built in support for jsx in routes
 
-Look at pino js for how to build a good logger and encore one too
+## Development
 
-like emcore distributed tracing too
+This workspace is built around Bun and TypeScript.
 
-like encore flow chart
+```bash
+bun install
+bun test
+```
 
-components view like encore service view but on steroids and supporting more than just services2
-
-We also have sentry support
+Most packages also expose their own package-level test script. See each module README for focused examples and commands.
