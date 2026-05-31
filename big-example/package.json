@@ -1,0 +1,32 @@
+{
+  "name": "big-example",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "bun run index.ts",
+    "typecheck": "bunx tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1000.0",
+    "@blazyts/backend-explorer": "workspace:*",
+    "@blazyts/batteries-authentication-clerk": "workspace:*",
+    "@blazyts/batteries-authentication-google": "workspace:*",
+    "@blazyts/batteries-authentication-self-hosted": "workspace:*",
+    "@blazyts/batteries-cache-adaptive": "workspace:*",
+    "@blazyts/batteries-cache-in-memory": "workspace:*",
+    "@blazyts/batteries-cache-redis": "workspace:*",
+    "@blazyts/batteries-file-upload-multer": "workspace:*",
+    "@blazyts/batteries-file-upload-s3": "workspace:*",
+    "@blazyts/batteries-logger": "workspace:*",
+    "@blazyts/batteries-redislike-client": "workspace:*",
+    "@blazyts/blazy-edge": "workspace:*",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}

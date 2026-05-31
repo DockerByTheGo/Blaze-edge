@@ -86,5 +86,5 @@ new RedisLikeEntityClient(redis, schema, {
 ## Scripts
 
 ```bash
-bun run test
+bun run node:test
 ```

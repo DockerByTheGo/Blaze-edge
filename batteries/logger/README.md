@@ -180,5 +180,5 @@ Supported handler return values:
 ## Scripts
 
 ```bash
-bun run test
+bun run node:test
 ```
