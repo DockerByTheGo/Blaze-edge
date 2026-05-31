@@ -1,8 +1,8 @@
 {
-  "name": "@blazyts/batteries-redislike-client",
-  "module": "src/index.ts",
+  "name": "@blazyts/batteries-logger",
+  "module": "index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./index.ts"
   },
   "type": "module",
   "private": true,
@@ -12,6 +12,9 @@
     "bun:test": "bun test"
   },
   "dependencies": {
+    "@blazyts/batteries-redislike-client": "workspace:*",
+    "drizzle-orm": "^0.44.7",
+    "mysql2": "^3.15.3",
     "zod": "^4.3.6"
   },
   "devDependencies": {
