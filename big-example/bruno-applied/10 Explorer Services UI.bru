@@ -1,0 +1,19 @@
+meta {
+  name: 10 Explorer Services UI
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/services
+  body: none
+  auth: none
+}
+
+tests {
+  test("renders explorer services HTML", function () {
+    expect(res.status).to.equal(200);
+    expect(res.body).to.include("auth");
+    expect(res.body).to.include("logger");
+  });
+}

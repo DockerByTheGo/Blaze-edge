@@ -1,0 +1,19 @@
+meta {
+  name: 09 Explorer Logs UI
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/logs
+  body: none
+  auth: none
+}
+
+tests {
+  test("renders explorer logs HTML", function () {
+    expect(res.status).to.equal(200);
+    expect(res.body).to.include("Backend Explorer");
+    expect(res.body).to.include("Logs");
+  });
+}

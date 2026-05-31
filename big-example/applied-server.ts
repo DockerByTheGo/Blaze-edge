@@ -289,6 +289,10 @@ const baseApp = applyCache(
   .block(app => app.http({
     path: "/catalog/featured",
     meta: { verb: "GET", protocol: "GET" },
+    cache: {
+      key: () => "featured-products",
+      ttl: 30_000,
+    },
     handler: async (ctx) => {
       featuredBuilds += 1;
       const body = {
@@ -359,7 +363,7 @@ const baseApp = applyCache(
 export const app = backendUi(baseApp as any, explorerLogsRepo as any);
 
 if (import.meta.main) {
-  const port =  await getAvailablePort()
+  const port = Number(Bun.env.PORT ?? await getAvailablePort());
   app.listen(port);
   console.log(`Applied Blazy server listening on http://localhost:${port}`);
   console.log("Explorer logs: http://localhost:%s/logs", port);

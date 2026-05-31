@@ -1,0 +1,24 @@
+meta {
+  name: 08 API Logs
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/api/logs
+  body: none
+  auth: none
+}
+
+tests {
+  test("returns explorer logs from the logger-backed repo", function () {
+    expect(res.status).to.equal(201);
+    expect(res.body.logs).to.be.an("array");
+    expect(res.body.logs.length).to.be.greaterThan(0);
+  });
+
+  test("logs include service calls", function () {
+    const withServices = res.body.logs.find(log => Array.isArray(log.serviceLogs) && log.serviceLogs.length > 0);
+    expect(withServices).to.not.equal(undefined);
+  });
+}

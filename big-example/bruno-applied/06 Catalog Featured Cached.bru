@@ -1,0 +1,18 @@
+meta {
+  name: 06 Catalog Featured Cached
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/catalog/featured
+  body: none
+  auth: none
+}
+
+tests {
+  test("uses in-memory cache for repeated catalog request", function () {
+    expect(res.status).to.equal(201);
+    expect(String(res.body.build)).to.equal(bru.getEnvVar("catalogBuild"));
+  });
+}

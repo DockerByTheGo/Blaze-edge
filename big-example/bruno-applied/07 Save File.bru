@@ -1,0 +1,35 @@
+meta {
+  name: 07 Save File
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/files
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "path": "bruno-demo.txt",
+    "content": "hello from the applied Bruno collection"
+  }
+}
+
+tests {
+  test("saves or reports an existing file", function () {
+    expect([201, 409]).to.include(res.status);
+  });
+
+  test("records successful file path", function () {
+    if (res.status === 201) {
+      expect(res.body.path).to.include("blazy-edge-applied-server");
+      bru.setEnvVar("savedFilePath", res.body.path);
+    }
+  });
+}

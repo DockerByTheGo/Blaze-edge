@@ -1,0 +1,23 @@
+meta {
+  name: 05 Catalog Featured
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/catalog/featured
+  body: none
+  auth: none
+}
+
+tests {
+  test("returns cached catalog data", function () {
+    expect(res.status).to.equal(201);
+    expect(res.body.build).to.be.a("number");
+    expect(res.body.products).to.be.an("array");
+  });
+
+  test("stores first cache build number", function () {
+    bru.setEnvVar("catalogBuild", String(res.body.build));
+  });
+}

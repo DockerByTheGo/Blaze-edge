@@ -1,0 +1,34 @@
+meta {
+  name: 02 Login
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/auth/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "username": "{{username}}",
+    "password": "{{password}}"
+  }
+}
+
+tests {
+  test("logs in with self-hosted auth", function () {
+    expect(res.status).to.equal(201);
+    expect(res.body.userId).to.equal(bru.getEnvVar("username"));
+    expect(res.body.token).to.be.a("string");
+  });
+
+  test("stores bearer token for later requests", function () {
+    bru.setEnvVar("authToken", res.body.token);
+  });
+}

@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev:applied": "bun run applied-server.ts",
+    "dev:applied": "PORT=3001 bun run applied-server.ts",
     "dev": "bun run server.ts",
     "start": "bun run index.ts",
     "typecheck": "bunx tsc -p tsconfig.json --noEmit"
