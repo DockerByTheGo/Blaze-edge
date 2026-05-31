@@ -159,7 +159,7 @@ class MemoryLogStore<TPayload> implements LogStore<TPayload> {
   }
 }
 
-async function runBigExample(): Promise<ExampleReport> {
+export async function runBigExample(): Promise<ExampleReport> {
   const app = BlazyConstructor.createProd();
   const redis = new MemoryRedisLikeClient();
 
@@ -212,6 +212,7 @@ async function runBigExample(): Promise<ExampleReport> {
   });
 
   const clerkAuth = new ClerkAuthService({
+    publishableKey: "pk_test_example",
     secretKey: "sk_test_example",
     clerkClient: {
       signInTokens: {
@@ -260,8 +261,8 @@ async function runBigExample(): Promise<ExampleReport> {
     framework: app.constructor.name,
     redisEntity: await redisEntities.get("session", "radoslav"),
     caches: {
-      inMemory: inMemoryCache.getEntry("homepage").unpack().unpack_with_default(null),
-      redis: (await redisCache.getEntry("profile")).unpack().unpack_with_default(null),
+      inMemory: inMemoryCache.getEntry("homepage").unpack().unpack_with_default("missing"),
+      redis: (await redisCache.getEntry("profile")).unpack().unpack_with_default("missing"),
       adaptive: (await adaptiveCache.getAll()).unpack().map(entry => entry.key),
     },
     auth: {
@@ -281,5 +282,7 @@ async function runBigExample(): Promise<ExampleReport> {
   };
 }
 
-const report = await runBigExample();
-console.log(JSON.stringify(report, null, 2));
+if (import.meta.main) {
+  const report = await runBigExample();
+  console.log(JSON.stringify(report, null, 2));
+}

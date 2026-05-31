@@ -1,90 +1,36 @@
-# @blazyts/batteries-redislike-client
+# Redis-Like Entity Client
 
-Typed JSON helper for Redis-compatible clients.
+Typed entity wrapper around a small Redis-like key/value interface, with Zod schema validation and key-prefix conventions.
 
-This package wraps a small Redis-like protocol with entity-aware keys, JSON serialization, Zod validation, TTL support, and typed get/list results.
+## Install
+
+`bun add @blazyts/batteries-redislike-client`
 
 ## Usage
 
 ```ts
-import {
-  RedisLikeEntityClient,
-  defineRedisLikeSchema,
-} from "@blazyts/batteries-redislike-client";
-import z from "zod/v4";
-
-const schema = defineRedisLikeSchema({
-  token: z.object({
-    userId: z.string(),
-    expiresAt: z.number(),
-  }),
-});
-
-const store = new RedisLikeEntityClient(redisClient, schema, {
-  keyPrefix: "auth:",
-});
-
-await store.put("token", "abc", {
-  userId: "demo",
-  expiresAt: Date.now() + 60_000,
-});
-
-const token = await store.get("token", "abc");
+import { RedisLikeEntityClient } from '@blazyts/batteries-redislike-client';
 ```
 
-Values are validated before write and after read.
+- Define entity schemas with Zod, pass a `RedisLikeClient`, then use `put`, `get`, `has`, `delete`, `getAll`, and `deleteAll` by entity name.
+- Use it to adapt Redis clients, test doubles, or compatible in-memory stores for other batteries.
 
-## Redis-like Client Shape
+## Public Surface
 
-```ts
-type RedisLikeClient = {
-  get: (key: string) => Promise<string | null> | string | null;
-  set: (key: string, value: string, mode?: "PX", ttl?: number) => unknown;
-  del: (key: string) => Promise<number> | number;
-  exists?: (key: string) => Promise<number> | number;
-  keys?: (pattern: string) => Promise<string[]> | string[];
-};
-```
+- Package name: `@blazyts/batteries-redislike-client`
+- Module kind: `module`
+- Entry point: `src/index.ts`
 
-The required methods work with clients like `ioredis`, `redis`, Bun Redis-compatible clients, or small adapters around another key-value store.
-
-## Keys
-
-By default, keys include the entity name:
-
-```ts
-new RedisLikeEntityClient(redis, schema, {
-  keyPrefix: "app:",
-  separator: ":",
-});
-
-// token abc -> app:token:abc
-```
-
-Disable entity names when you want the prefix to fully define the namespace:
-
-```ts
-new RedisLikeEntityClient(redis, schema, {
-  includeEntityInKey: false,
-  keyPrefix: "auth:token:",
-});
-
-// token abc -> auth:token:abc
-```
-
-## API
-
-- `put(entity, key, value, { ttl }?)`
-- `get(entity, key)`
-- `has(entity, key)`
-- `delete(entity, key)`
-- `deleteAll(entity)`
-- `getAll(entity)`
-
-`getAll()` and `deleteAll()` require the Redis-like client to expose `keys(pattern)`.
+Runtime dependencies: `zod`.
+Peer dependencies: `typescript`.
 
 ## Scripts
 
-```bash
-bun run node:test
-```
+- `bun run lint`: `bun --bun eslint .`
+- `bun run node:test`: `bun x --bun vitest run --config vitest.config.ts`
+- `bun run bun:test`: `bun test`
+
+## Notes
+
+- The core Redis contract is intentionally tiny: set/get/exists/del/keys-style behavior.
+- Key composition options such as `includeEntityInKey` and `keyPrefix` affect compatibility with cache packages.
