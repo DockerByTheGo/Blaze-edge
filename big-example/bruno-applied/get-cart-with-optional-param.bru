@@ -1,0 +1,23 @@
+meta {
+  name: get-cart-with-optional-param
+  type: http
+  seq: 13
+}
+
+post {
+  url: {{baseUrl}}/rpc/getCart
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "id": "4",
+    "one": true
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

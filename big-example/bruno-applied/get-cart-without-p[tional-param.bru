@@ -1,0 +1,22 @@
+meta {
+  name: get-cart-without-p[tional-param
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/rpc/getCart
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "id": "cart-1"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

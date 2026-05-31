@@ -6,9 +6,24 @@ import {
 import { applyCache, InMemoryCacheService } from "@blazyts/batteries-cache-in-memory";
 import { MulterFileSaver } from "@blazyts/batteries-file-upload-multer";
 import { CombinedLoggerService, type LogStore } from "@blazyts/batteries-logger";
-import { getAvailablePort } from "@blazyts/better-standard-library";
-import { BlazyConstructor } from "@blazyts/blazy-edge";
+import { getAvailablePort, Try } from "@blazyts/better-standard-library";
+import { BlazyConstructor, Message } from "@blazyts/blazy-edge";
 import z from "zod/v4";
+
+const cartService = {
+  config: {},
+  getAll: () => ["cart 1", "cart 2", "cart 3"],
+  get: (number: string) => number
+}
+
+let cpun = 0
+const counterService = {
+  config: {},
+  count: () => {
+    return cpun++
+  }
+}
+
 
 type AppUserRow = {
   username: string;
@@ -92,7 +107,7 @@ class MemoryLogStore<TPayload> implements LogStore<TPayload> {
 }
 
 class LoggerBackedExplorerLogsRepo {
-  constructor(private readonly logger: CombinedLoggerService<LoggerPayload>) {}
+  constructor(private readonly logger: CombinedLoggerService<LoggerPayload>) { }
 
   async getRequestLog(id: string): Promise<ExplorerLog | null> {
     return (await this.getAllLogs()).find(log => log.requestId === id) ?? null;
@@ -195,10 +210,12 @@ const baseApp = applyCache(
   cache,
   BlazyConstructor.createProd(),
 )
+  .addService("cartService", cartService)
+  .addService("counter", counterService)
   .addService("auth", auth)
   .addService("cache", cache)
-  .addService("fileSaver", fileSaver )
-  .addService("logger", logger )
+  .addService("fileSaver", fileSaver)
+  .addService("logger", logger)
   .beforeRequestHandler("attachUser", async ctx => {
     const authorization = ctx.reqData.headers.authorization ?? ctx.reqData.headers.Authorization;
     const token = authorization?.replace(/^Bearer\s+/i, "");
@@ -216,8 +233,9 @@ const baseApp = applyCache(
       password: z.string().min(1),
     }),
     handler: async ctx => {
-      const username = String(ctx.request.body.get("username"));
-      const password = String(ctx.request.body.get("password"));
+      ctx.user?.userId
+      const username = ctx.request.body.get("username")
+      const password = (ctx.request.body.get("password"));
       const started = new Date();
       const created = await ctx.services.getService("auth").registerUser(username, password);
       const body = created ? { username } : { error: "invalid_or_existing_user" };
@@ -289,10 +307,6 @@ const baseApp = applyCache(
   .block(app => app.http({
     path: "/catalog/featured",
     meta: { verb: "GET", protocol: "GET" },
-    cache: {
-      key: () => "featured-products",
-      ttl: 30_000,
-    },
     handler: async (ctx) => {
       featuredBuilds += 1;
       const body = {
@@ -358,9 +372,82 @@ const baseApp = applyCache(
       await recordRequest(logger, ctx, { status: 201, body });
       return { status: 201, body };
     },
-  });
+  })
+  .get({
+    path: "/hii",
+    handler: v => v
+  })
+  .get(
+    {
+      path: "/:hi/:koko/lolo/:po",
+      handler: v => {
+        const count = v.services.getService("counter").count();
+        
+        let g = v.request.params.getUnsafe("string");
+        
+        if (count % 3 === 0) {
+
+          return {
+            hi: v.request.params.get("hi"),
+            ko: v.request.params.get("koko"),
+            po: v.request.params.get("po")
+          }
+        } else if (count % 3 === 1) {
+          return {status:408, body: null}
+        } else {
+          return undefined
+        }
+
+      },
+    }
+  )
+  .ws({
+    "path": "/ws/:id",
+    messages: {
+      messagesItCanSend: {
+        "new-message": new Message(
+          z.object({ content: z.string() }),
+          ctx => {
+            ctx.ws.message("jiji", {})
+            console.log("Sending message to room", ctx, "with content:", ctx.message.body.get("content"));
+          }
+        )
+      },
+      messagesItCanRecieve: {
+        "new-message": new Message(
+          z.object({ content: z.string() }),
+          async ctx => {
+            await ctx.ws.message("new-message", { content: "jkhfwbhksbjhd" })
+          }
+        )
+      },
+    }
+  })
+  .post({
+    path: "/koko",
+    handler: v => JSON.stringify(v)
+  })
+  .rpc({
+    name: "getCart",
+    handler: ctx => Try(
+        ctx.request.body.get("one"),
+        {
+          ifNone: () => ({ items: ctx.services.getService("cartService").getAll() }),
+          ifNotNone: v => ctx.services.getService("cartService").get(v)
+        }
+      )
+    ,
+    args: z.object({
+      id: z.string(),
+      one: z.boolean().optional()
+    })
+  })
 
 export const app = backendUi(baseApp as any, explorerLogsRepo as any);
+
+const client = app.createClient().createClient()("localhost:"+3005)
+
+client.invoke;
 
 if (import.meta.main) {
   const port = Number(Bun.env.PORT ?? await getAvailablePort());
